@@ -1,0 +1,17 @@
+schema: 1
+story: '1.4'
+gate: CONCERNS
+status_reason: 'URL de produção funcional com env vars corretas. AC1 e AC4 (deploy automático via GitHub) requerem conexão formal do repo GitHub ao Vercel — validar no próximo push.'
+reviewer: 'Quinn'
+updated: '2026-05-20T00:25:00-03:00'
+top_issues:
+  - id: 'INF-001'
+    severity: medium
+    finding: 'AC1 e AC4: deploy automático via push para main e preview deploys para PRs dependem do repositório GitHub estar formalmente conectado ao Vercel via integração GitHub. Verificar se a conexão é via upload direto ou integração Git.'
+    suggested_action: 'No Vercel Dashboard → Project Settings → Git → verificar se repo GitHub está conectado. Se não, reconectar via "Import Git Repository". O próximo push (quando @devops criar o remote) validará o auto-deploy.'
+  - id: 'INF-002'
+    severity: low
+    finding: 'GitHub Actions CI (.github/workflows/ci.yml) requer secrets VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no repositório GitHub para o job de build passar.'
+    suggested_action: 'Após criar o repo GitHub: Settings → Secrets and variables → Actions → New repository secret. Adicionar as mesmas env vars do Vercel.'
+waiver:
+  active: false

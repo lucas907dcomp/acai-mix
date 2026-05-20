@@ -1,0 +1,17 @@
+schema: 1
+story: '1.2'
+gate: CONCERNS
+status_reason: '7 de 8 ACs atendidos. AC7 (supabase start local) bloqueado por Docker Desktop em Windows containers mode — workaround documentado, sem impacto no desenvolvimento em nuvem.'
+reviewer: 'Quinn'
+updated: '2026-05-20T00:20:00-03:00'
+top_issues:
+  - id: 'ENV-001'
+    severity: medium
+    finding: 'AC7: supabase start falha localmente — Docker Desktop está em modo Windows containers. O Supabase CLI requer Linux containers (WSL2 backend).'
+    suggested_action: 'Para ativar: Docker tray icon → "Switch to Linux containers...". Não bloqueia desenvolvimento — projeto usa Supabase Cloud diretamente. Resolver antes de precisar testar migrations localmente (EPIC-02).'
+  - id: 'DOC-001'
+    severity: low
+    finding: 'Timezone America/Sao_Paulo configurado apenas como comentário no config.toml. O Supabase Cloud lê esse timezone da configuração do projeto no dashboard, não do config.toml local.'
+    suggested_action: 'Verificar em Supabase Dashboard → Project Settings → General → Time zone. Crítico para Edge Functions de fechamento de turno às 16h/23h.'
+waiver:
+  active: false
