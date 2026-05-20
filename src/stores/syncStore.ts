@@ -197,7 +197,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         toast.success(`${syncedCount} venda(s) sincronizada(s).`)
       }
     } catch (err) {
-      console.error('drain error:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('drain error:', msg)
+      toast.error('Falha ao sincronizar vendas. Tentará novamente ao reconectar.')
     } finally {
       set({ isSyncing: false })
     }

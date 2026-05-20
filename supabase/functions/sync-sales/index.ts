@@ -3,6 +3,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 interface SalePayload {
   id: string
   shift_id: string
@@ -45,8 +51,16 @@ async function findShiftByTimestamp(
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS })
+  }
+
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
+    return new Response('Method not allowed', {
+      status: 405,
+      headers: CORS_HEADERS,
+    })
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
@@ -57,11 +71,11 @@ Deno.serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
   }
 
-  const sales = (body.sales ?? []).slice(0, 50) // max 50 per batch
+  const sales = (body.sales ?? []).slice(0, 50)
   const now = new Date().toISOString()
 
   let synced = 0
@@ -73,7 +87,6 @@ Deno.serve(async (req) => {
       let shift_id = sale.shift_id
       let sync_reconciled = false
 
-      // Verify the sale's shift contains the created_at timestamp
       const { data: shift } = await supabase
         .from('shifts')
         .select('id, opened_at, closed_at')
@@ -137,6 +150,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({ synced, reconciled, errors }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   })
 })
