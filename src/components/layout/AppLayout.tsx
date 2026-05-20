@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart2, LogOut, Menu, Settings, ShoppingCart, X } from 'lucide-react'
+import { BarChart2, History, LogOut, Menu, Settings, ShoppingCart, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 const ADMIN_LINKS = [
   { to: '/pos', label: 'Caixa (PDV)', icon: ShoppingCart },
   { to: '/dashboard', label: 'Dashboard', icon: BarChart2 },
+  { to: '/sales-history', label: 'Histórico', icon: History },
   { to: '/admin/settings', label: 'Configurações', icon: Settings },
 ]
 

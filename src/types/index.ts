@@ -45,6 +45,8 @@ export interface Shift {
   sale_count: number
 }
 
+export type SaleStatus = 'COMPLETED' | 'CANCELLED'
+
 export interface Sale {
   id: string
   shift_id: string
@@ -60,4 +62,8 @@ export interface Sale {
   synced_at: string | null
   created_offline: boolean
   created_at: string
+  // Added in Fase 2 — optional: DB DEFAULT 'COMPLETED', not sent on INSERT
+  status?: SaleStatus
+  cancelled_at?: string | null
+  cancelled_by?: string | null
 }

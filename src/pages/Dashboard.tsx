@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { RefreshCw, TrendingUp, ShoppingCart, Calculator, BarChart2 } from 'lucide-react'
+import { Download, RefreshCw, TrendingUp, ShoppingCart, Calculator, BarChart2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -9,6 +9,8 @@ import { SalesChart } from '@/components/dashboard/SalesChart'
 import { ShiftBreakdown } from '@/components/dashboard/ShiftBreakdown'
 import { PaymentBreakdown } from '@/components/dashboard/PaymentBreakdown'
 import { useTodayAndYesterday, useDailySummary } from '@/hooks/dashboard'
+import { useSalesForExport } from '@/hooks/useSalesForExport'
+import { generateSalesCsv } from '@/utils/csv'
 import type { DatePeriod } from '@/types/dashboard'
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -32,6 +34,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<DatePeriod>('today')
   const [lastRefreshed, setLastRefreshed] = useState(new Date())
   const queryClient = useQueryClient()
+  const exportQuery = useSalesForExport(period)
 
   const profile = useAuthStore((s) => s.profile)
   const locationId = profile?.location_id ?? ''
@@ -89,6 +92,18 @@ export default function Dashboard() {
           <span className="text-xs text-[#9d7bc8]">
             Atualizado às {format(lastRefreshed, 'HH:mm', { locale: ptBR })}
           </span>
+          <button
+            onClick={() => {
+              if (exportQuery.data && exportQuery.data.length > 0) {
+                generateSalesCsv(exportQuery.data, exportQuery.from, exportQuery.to)
+              }
+            }}
+            disabled={!exportQuery.data || exportQuery.data.length === 0 || exportQuery.isLoading}
+            className="flex items-center gap-1.5 text-xs text-[#9d7bc8] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#2d1550] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exportar CSV
+          </button>
           <button
             onClick={handleRefresh}
             className="flex items-center gap-1.5 text-xs text-[#9d7bc8] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#2d1550]"

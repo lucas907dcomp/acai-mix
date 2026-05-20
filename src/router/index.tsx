@@ -33,6 +33,11 @@ export const router = createBrowserRouter([
                 lazy: () =>
                   import('@/pages/AdminSettings').then((m) => ({ Component: m.default })),
               },
+              {
+                path: '/sales-history',
+                lazy: () =>
+                  import('@/pages/SalesHistoryPage').then((m) => ({ Component: m.default })),
+              },
             ],
           },
         ],
