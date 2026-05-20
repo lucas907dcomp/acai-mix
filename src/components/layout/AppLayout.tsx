@@ -4,6 +4,7 @@ import { BarChart2, LogOut, Menu, Settings, ShoppingCart, X } from 'lucide-react
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
+import { useLocationData } from '@/hooks/useLocationData'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +24,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const syncInitialized = useRef(false)
+  const { data: location } = useLocationData()
 
   useEffect(() => {
     if (syncInitialized.current) return
@@ -62,9 +64,13 @@ export function AppLayout() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-[#2d1550]">
         <div className="w-8 h-8 rounded-full bg-[#4c1e8c] flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">A</span>
+          <span className="text-white font-bold text-sm">
+            {(location?.name ?? 'A')[0].toUpperCase()}
+          </span>
         </div>
-        <span className="text-white font-semibold text-lg">AçaiMix</span>
+        <span className="text-white font-semibold text-lg truncate">
+          {location?.name ?? 'AçaiMix'}
+        </span>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1" aria-label="Navegação principal">
@@ -137,7 +143,7 @@ export function AppLayout() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="text-white font-semibold">AçaiMix</span>
+          <span className="text-white font-semibold">{location?.name ?? 'AçaiMix'}</span>
         </header>
 
         <main className="flex-1 overflow-auto">
