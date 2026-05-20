@@ -1,0 +1,17 @@
+storyId: "2.3"
+verdict: CONCERNS
+date: "2026-05-20"
+agent: "@qa"
+issues:
+  - severity: low
+    category: tests
+    description: "Sem testes unitários para ProtectedRoute e RootRedirect"
+    recommendation: "Cobrir com testes de integração em EPIC-07. Aceitável para MVP."
+checks:
+  code_review: PASS
+  unit_tests: WARN
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: PASS
+  security: PASS
+  documentation: PASS
