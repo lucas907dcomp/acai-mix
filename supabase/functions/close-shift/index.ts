@@ -109,12 +109,3 @@ Deno.serve(async (_req) => {
     })
   }
 })
-
-Deno.cron('close-shift', '0 2,19 * * *', async () => {
-  try {
-    const result = await runCloseShift()
-    console.log(`close-shift cron: closed=${result.closed}, opened=${result.opened}`)
-  } catch (err) {
-    console.error('close-shift cron error:', err instanceof Error ? err.message : String(err))
-  }
-})
