@@ -25,8 +25,7 @@ export function PriceHistory({ productId }: PriceHistoryProps) {
   const { data, isLoading } = useQuery<HistoryRow[]>({
     queryKey: ['price-history', productId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('product_price_history')
         .select('id, old_price, new_price, changed_at')
         .eq('product_id', productId)
