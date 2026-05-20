@@ -5,8 +5,7 @@ import { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 import { useScaleStore } from '@/stores/scaleStore'
 
 export function useScale() {
-  const { setProvider, updateWeight, updateConnection, openManualDialog, disconnect } =
-    useScaleStore()
+  const { setProvider, updateWeight, updateConnection, disconnect } = useScaleStore()
 
   useEffect(() => {
     const useMock = import.meta.env.VITE_SCALE_MOCK === 'true'
@@ -17,9 +16,10 @@ export function useScale() {
     const unsubWeight = provider.onWeight(updateWeight)
     const unsubConnection = provider.onConnectionChange(updateConnection)
 
-    provider.connect().catch(() => {
-      // Connection failed — user can activate manual mode via dialog
-    })
+    // Mock connects automatically; serial waits for user gesture via "Conectar Balança" button
+    if (useMock) {
+      provider.connect().catch(() => {})
+    }
 
     return () => {
       unsubWeight()
@@ -27,8 +27,6 @@ export function useScale() {
       disconnect()
     }
   }, [setProvider, updateWeight, updateConnection, disconnect])
-
-  return { openManualDialog }
 }
 
 export function useSwitchToManual() {

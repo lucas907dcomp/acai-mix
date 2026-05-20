@@ -13,6 +13,7 @@ interface ScaleState {
   openManualDialog: () => void
   closeManualDialog: () => void
   disconnect: () => void
+  connectScale: () => Promise<void>
 }
 
 export const useScaleStore = create<ScaleState>((set, get) => ({
@@ -37,5 +38,11 @@ export const useScaleStore = create<ScaleState>((set, get) => ({
     const { provider } = get()
     provider?.disconnect()
     set({ isConnected: false, currentWeightGrams: null, provider: null })
+  },
+
+  connectScale: async () => {
+    const { provider } = get()
+    if (!provider) return
+    await provider.connect()
   },
 }))
