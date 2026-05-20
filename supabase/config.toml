@@ -370,8 +370,6 @@ allow_dynamic_registration = false
 
 [functions.close-shift]
 verify_jwt = false
-# 19:00 UTC = 16:00 BRT | 02:00 UTC = 23:00 BRT
-schedule = "0 2,19 * * *"
 
 [edge_runtime]
 enabled = true
