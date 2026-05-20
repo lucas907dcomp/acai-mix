@@ -2,10 +2,10 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/queryClient'
-import { db } from '@/providers/sync/DexieDatabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { useShiftStore } from '@/stores/shiftStore'
+import { useSyncStore } from '@/stores/syncStore'
 import type { PaymentMethod, Sale } from '@/types'
 
 export function formatCurrency(value: number): string {
@@ -97,8 +97,8 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       toast.success(`Venda confirmada! ${formatCurrency(sale.amount)}`)
       get().reset()
     } catch {
-      const pendingSale = { ...sale, created_offline: true, synced: false }
-      await db.pending_sales.add(pendingSale)
+      await useSyncStore.getState().addPending({ ...sale, created_offline: true })
+      useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
       toast.error('Sem conexão. Venda salva offline.')
       get().reset()
     } finally {

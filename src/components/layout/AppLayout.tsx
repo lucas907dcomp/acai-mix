@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { BarChart2, LogOut, Menu, Settings, ShoppingCart, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { useSyncStore } from '@/stores/syncStore'
+import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
 import { cn } from '@/lib/utils'
 
 const ADMIN_LINKS = [
@@ -20,6 +22,14 @@ export function AppLayout() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const syncInitialized = useRef(false)
+
+  useEffect(() => {
+    if (syncInitialized.current) return
+    syncInitialized.current = true
+    useSyncStore.getState().initListeners()
+    useSyncStore.getState().startClockWatch()
+  }, [])
 
   const links = profile?.role === 'admin' ? ADMIN_LINKS : STAFF_LINKS
 
@@ -67,6 +77,9 @@ export function AppLayout() {
             {profile?.display_name || 'Usuário'}
           </p>
           <p className="text-xs text-[#9d7bc8] capitalize">{profile?.role}</p>
+        </div>
+        <div className="px-3 py-1 mb-1">
+          <OfflineIndicator />
         </div>
         <button
           onClick={handleLogout}

@@ -34,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tanstack/react-query-devtools": "^5.100.11",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -43,7 +44,9 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.4",
     "prettier": "^3.5.3",
     "supabase": "^2.100.1",
