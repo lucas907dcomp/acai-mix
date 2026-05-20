@@ -14,6 +14,8 @@ export function usePricePerGram() {
         .select('price_per_gram')
         .eq('active', true)
         .eq('location_id', locationId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .single()
 
       if (error) throw error
