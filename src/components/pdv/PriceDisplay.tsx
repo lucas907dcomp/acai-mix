@@ -35,9 +35,9 @@ export function PriceDisplay() {
         <p className="text-sm text-[#9d7bc8]">
           {displayWeight}g ×{' '}
           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-            pricePerGram
+            pricePerGram * 1000
           )}
-          /g
+          /kg
         </p>
       )}
 

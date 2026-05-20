@@ -22,6 +22,7 @@ export function usePricePerGram() {
       return data.price_per_gram as number
     },
     enabled: !!locationId,
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   })
 }
