@@ -71,7 +71,8 @@ export function PriceDisplay() {
               .getState()
               .captureWeight(currentWeight ?? capturedWeight, pricePerGram ?? 0)
           }
-          className="w-full py-1.5 rounded-lg border border-[#2d1550] text-[#9d7bc8] hover:text-white text-sm transition-colors"
+          disabled={!currentWeight || currentWeight <= 0 || !pricePerGram}
+          className="w-full py-1.5 rounded-lg border border-[#2d1550] text-[#9d7bc8] hover:text-white disabled:opacity-40 text-sm transition-colors"
         >
           Recapturar
         </button>

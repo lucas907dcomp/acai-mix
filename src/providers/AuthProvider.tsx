@@ -40,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         clearAuth()
       }
+    }).catch(() => {
+      if (!cancelled) clearAuth()
     })
 
     // Listener for subsequent auth changes (sign-in via useAuth, sign-out, token refresh)

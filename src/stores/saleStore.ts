@@ -52,7 +52,10 @@ export const useSaleStore = create<SaleState>((set, get) => ({
 
   setAmountReceived: (value) => {
     const { amount } = get()
-    const change = amount !== null ? Math.round((value - amount) * 100) / 100 : null
+    const change =
+      amount !== null
+        ? Math.round(value * 100 - amount * 100) / 100
+        : null
     set({ amountReceived: value, change })
   },
 
@@ -98,11 +101,17 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
       toast.success(`Venda confirmada! ${formatCurrency(sale.amount)}`)
       get().reset()
-    } catch {
-      await useSyncStore.getState().addPending({ ...sale, created_offline: true })
-      useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
-      toast.error('Sem conexão. Venda salva offline.')
-      get().reset()
+    } catch (err) {
+      const isNetworkError = !navigator.onLine || err instanceof TypeError
+      if (isNetworkError) {
+        await useSyncStore.getState().addPending({ ...sale, created_offline: true })
+        useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+        toast.error('Sem conexão. Venda salva offline.')
+        get().reset()
+      } else {
+        const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+        toast.error(`Erro ao confirmar venda: ${msg}`)
+      }
     } finally {
       set({ isConfirming: false })
     }

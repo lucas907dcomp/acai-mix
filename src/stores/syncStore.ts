@@ -92,7 +92,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       const h = getHours(new Date())
       const m = getMinutes(new Date())
-      const isCutoff = (h === 16 || h === 23) && m < 2
+      const isCutoff = (h === 16 || h === 23) && m < 5
 
       if (!isCutoff || h === lastSoftCloseAt) return
 
@@ -206,16 +206,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   },
 
   initListeners: () => {
+    if (typeof window === 'undefined') return
+
     if (_listenersAttached) {
       get().refreshPendingCount()
       return
     }
     _listenersAttached = true
-
-    if (typeof window === 'undefined') {
-      get().refreshPendingCount()
-      return
-    }
 
     const handleOnline = async () => {
       set({ isOnline: true })

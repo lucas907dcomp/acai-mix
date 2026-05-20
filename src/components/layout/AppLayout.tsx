@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { BarChart2, LogOut, Menu, Settings, ShoppingCart, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useLocationData } from '@/hooks/useLocationData'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
@@ -21,6 +22,8 @@ const STAFF_LINKS = [
 export function AppLayout() {
   const profile = useAuthStore((s) => s.profile)
   const clearAuth = useAuthStore((s) => s.clearAuth)
+  const clearShift = useShiftStore((s) => s.clearShift)
+  const stopPolling = useShiftStore((s) => s.stopPolling)
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const syncInitialized = useRef(false)
@@ -37,6 +40,8 @@ export function AppLayout() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    stopPolling()
+    clearShift()
     clearAuth()
     navigate('/login', { replace: true })
   }

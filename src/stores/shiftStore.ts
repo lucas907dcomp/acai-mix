@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { queryClient } from '@/lib/queryClient'
 import type { PaymentMethod, Shift } from '@/types'
 
 interface ShiftState {
@@ -88,6 +89,8 @@ export const useShiftStore = create<ShiftState>()(
 
           if (error) throw error
           set({ activeShift: null })
+          queryClient.invalidateQueries({ queryKey: ['shift-history'] })
+          queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erro ao fechar turno'
           set({ error: msg })
