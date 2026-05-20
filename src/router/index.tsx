@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
 
 export const router = createBrowserRouter([
   {
@@ -14,21 +15,27 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        path: '/pos',
-        lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
-      },
-    ],
-  },
-  {
-    element: <ProtectedRoute requiredRole="admin" />,
-    children: [
-      {
-        path: '/dashboard',
-        lazy: () => import('@/pages/Dashboard').then((m) => ({ Component: m.default })),
-      },
-      {
-        path: '/admin/settings',
-        lazy: () => import('@/pages/AdminSettings').then((m) => ({ Component: m.default })),
+        element: <AppLayout />,
+        children: [
+          {
+            path: '/pos',
+            lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
+          },
+          {
+            element: <ProtectedRoute requiredRole="admin" />,
+            children: [
+              {
+                path: '/dashboard',
+                lazy: () => import('@/pages/Dashboard').then((m) => ({ Component: m.default })),
+              },
+              {
+                path: '/admin/settings',
+                lazy: () =>
+                  import('@/pages/AdminSettings').then((m) => ({ Component: m.default })),
+              },
+            ],
+          },
+        ],
       },
     ],
   },
