@@ -21,6 +21,7 @@ interface SaleState {
   change: number | null
   isConfirming: boolean
   captureWeight: (grams: number, pricePerGram: number) => void
+  captureAmount: (amount: number, pricePerGram: number) => void
   setPaymentMethod: (method: PaymentMethod) => void
   setAmountReceived: (value: number) => void
   confirmSale: () => Promise<void>
@@ -40,6 +41,11 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     const pricePerKgCents = Math.round(pricePerGram * 100_000)
     const amountCents = Math.round((grams * pricePerKgCents) / 1_000)
     const amount = amountCents / 100
+    set({ capturedWeightGrams: grams, pricePerGram, amount })
+  },
+
+  captureAmount: (amount, pricePerGram) => {
+    const grams = pricePerGram > 0 ? Math.round(amount / pricePerGram) : 0
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 

@@ -34,6 +34,29 @@ describe('saleStore.captureWeight', () => {
   })
 })
 
+describe('saleStore.captureAmount', () => {
+  it('preserva o valor exato digitado pelo operador', () => {
+    useSaleStore.getState().captureAmount(24.75, 0.05499)
+    expect(useSaleStore.getState().amount).toBe(24.75)
+  })
+
+  it('back-calcula gramas a partir do valor', () => {
+    useSaleStore.getState().captureAmount(27.5, 0.055)
+    // 27.5 / 0.055 = 500
+    expect(useSaleStore.getState().capturedWeightGrams).toBe(500)
+  })
+
+  it('armazena pricePerGram no estado', () => {
+    useSaleStore.getState().captureAmount(20, 0.065)
+    expect(useSaleStore.getState().pricePerGram).toBe(0.065)
+  })
+
+  it('retorna 0 gramas quando pricePerGram é zero', () => {
+    useSaleStore.getState().captureAmount(10, 0)
+    expect(useSaleStore.getState().capturedWeightGrams).toBe(0)
+  })
+})
+
 describe('saleStore.setPaymentMethod', () => {
   it('define o método de pagamento', () => {
     useSaleStore.getState().setPaymentMethod('pix')

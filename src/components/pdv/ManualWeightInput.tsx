@@ -12,27 +12,26 @@ interface ManualWeightInputProps {
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
   const [raw, setRaw] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const captureWeight = useSaleStore((s) => s.captureWeight)
+  const captureAmount = useSaleStore((s) => s.captureAmount)
   const { data: pricePerGram } = usePricePerGram()
 
   function handleConfirm() {
-    const grams = parseFloat(raw)
+    const amount = parseFloat(raw.replace(',', '.'))
 
-    if (isNaN(grams) || grams <= 0) {
-      setError('Digite um peso válido maior que zero.')
+    if (isNaN(amount) || amount <= 0) {
+      setError('Digite um valor válido maior que zero.')
       return
     }
-    if (grams > 10000) {
-      setError('Peso máximo: 10.000g (10kg).')
+    if (amount > 10_000) {
+      setError('Valor máximo: R$ 10.000,00.')
       return
     }
 
-    const rounded = Math.round(grams)
-    provider.setWeight(rounded)
+    if (!pricePerGram) return
 
-    if (pricePerGram) {
-      captureWeight(rounded, pricePerGram)
-    }
+    const grams = Math.round(amount / pricePerGram)
+    provider.setWeight(grams)
+    captureAmount(amount, pricePerGram)
 
     setRaw('')
     setError(null)
@@ -44,27 +43,34 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <label htmlFor="manual-weight" className="text-sm text-[#9d7bc8]">
-        Peso em gramas
+      <label htmlFor="manual-value" className="text-sm text-[#9d7bc8]">
+        Valor da venda (R$)
       </label>
-      <Input
-        id="manual-weight"
-        type="number"
-        inputMode="decimal"
-        placeholder="Ex: 350"
-        value={raw}
-        onChange={(e) => {
-          setRaw(e.target.value)
-          setError(null)
-        }}
-        onKeyDown={handleKeyDown}
-        className="text-4xl h-16 text-center font-bold bg-[#0f0720] border-[#2d1550] text-white placeholder:text-[#4a3570] focus-visible:ring-[#4c1e8c]"
-        aria-label="Peso manual em gramas"
-        aria-describedby={error ? 'weight-error' : undefined}
-        autoFocus
-      />
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-[#4a3570] pointer-events-none select-none">
+          R$
+        </span>
+        <Input
+          id="manual-value"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          min="0.01"
+          placeholder="0,00"
+          value={raw}
+          onChange={(e) => {
+            setRaw(e.target.value)
+            setError(null)
+          }}
+          onKeyDown={handleKeyDown}
+          className="pl-12 text-4xl h-16 text-center font-bold bg-[#0f0720] border-[#2d1550] text-white placeholder:text-[#4a3570] focus-visible:ring-[#4c1e8c]"
+          aria-label="Valor manual da venda em reais"
+          aria-describedby={error ? 'value-error' : undefined}
+          autoFocus
+        />
+      </div>
       {error && (
-        <p id="weight-error" className="text-sm text-red-400" role="alert">
+        <p id="value-error" className="text-sm text-red-400" role="alert">
           {error}
         </p>
       )}
@@ -73,7 +79,7 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
         disabled={!raw || !pricePerGram}
         className="h-14 text-lg bg-[#4c1e8c] hover:bg-[#5d2aaa] disabled:opacity-40 text-white"
       >
-        Confirmar Peso
+        Confirmar Valor
       </Button>
     </div>
   )
