@@ -1,8 +1,9 @@
 import Dexie, { type Table } from 'dexie'
 import type { Sale } from '@/types'
 
-export interface PendingSale extends Omit<Sale, 'id'> {
+export interface PendingSale extends Sale {
   local_id?: number
+  synced: boolean
 }
 
 class AcaiMixDatabase extends Dexie {
@@ -10,8 +11,8 @@ class AcaiMixDatabase extends Dexie {
 
   constructor() {
     super('acaimix')
-    this.version(1).stores({
-      pending_sales: '++local_id, shift_id, created_at, payment_method',
+    this.version(2).stores({
+      pending_sales: '++local_id, id, shift_id, created_at, payment_method, synced',
     })
   }
 }

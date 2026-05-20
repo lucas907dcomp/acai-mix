@@ -130,12 +130,141 @@ export type Database = {
           },
         ]
       }
+      shifts: {
+        Row: {
+          id: string
+          location_id: string
+          shift_number: number
+          opened_at: string
+          opened_by: string
+          closed_at: string | null
+          closed_by: string | null
+          status: string
+          total_sales: number
+          total_pix: number
+          total_card: number
+          total_cash: number
+          sale_count: number
+        }
+        Insert: {
+          id?: string
+          location_id: string
+          shift_number: number
+          opened_at?: string
+          opened_by: string
+          closed_at?: string | null
+          closed_by?: string | null
+          status?: string
+          total_sales?: number
+          total_pix?: number
+          total_card?: number
+          total_cash?: number
+          sale_count?: number
+        }
+        Update: {
+          id?: string
+          location_id?: string
+          shift_number?: number
+          opened_at?: string
+          opened_by?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          status?: string
+          total_sales?: number
+          total_pix?: number
+          total_card?: number
+          total_cash?: number
+          sale_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          id: string
+          shift_id: string
+          location_id: string
+          weight_grams: number | null
+          weight_source: string
+          price_per_gram: number
+          amount: number
+          payment_method: string
+          amount_received: number | null
+          change_returned: number | null
+          sync_reconciled: boolean
+          synced_at: string | null
+          created_offline: boolean
+          created_at: string
+        }
+        Insert: {
+          id: string
+          shift_id: string
+          location_id: string
+          weight_grams?: number | null
+          weight_source: string
+          price_per_gram: number
+          amount: number
+          payment_method: string
+          amount_received?: number | null
+          change_returned?: number | null
+          sync_reconciled?: boolean
+          synced_at?: string | null
+          created_offline?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          shift_id?: string
+          location_id?: string
+          weight_grams?: number | null
+          weight_source?: string
+          price_per_gram?: number
+          amount?: number
+          payment_method?: string
+          amount_received?: number | null
+          change_returned?: number | null
+          sync_reconciled?: boolean
+          synced_at?: string | null
+          created_offline?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      get_my_location_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -22,21 +22,27 @@ export interface UserProfile {
 
 export interface Product {
   id: string
+  location_id: string
   name: string
   price_per_gram: number
   active: boolean
-  created_at: string
+  updated_at: string
 }
 
 export interface Shift {
   id: string
   location_id: string
-  opened_by: string
+  shift_number: number
   opened_at: string
+  opened_by: string
   closed_at: string | null
+  closed_by: string | null
   status: ShiftStatus
   total_sales: number
-  total_amount: number
+  total_pix: number
+  total_card: number
+  total_cash: number
+  sale_count: number
 }
 
 export interface Sale {
@@ -46,9 +52,12 @@ export interface Sale {
   weight_grams: number
   weight_source: WeightSource
   price_per_gram: number
-  total_amount: number
+  amount: number
   payment_method: PaymentMethod
+  amount_received: number | null
+  change_returned: number | null
   sync_reconciled: boolean
+  synced_at: string | null
   created_offline: boolean
   created_at: string
 }
