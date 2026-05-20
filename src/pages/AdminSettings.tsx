@@ -43,7 +43,7 @@ function PriceCard() {
   } = useForm<PriceForm>({ resolver: zodResolver(priceSchema), mode: 'onChange' })
 
   useEffect(() => {
-    if (product) reset({ price_per_kg: product.price_per_gram * 1000 })
+    if (product) reset({ price_per_kg: parseFloat((product.price_per_gram * 1000).toFixed(2)) })
   }, [product, reset])
 
   async function onSubmit(values: PriceForm) {
@@ -106,7 +106,7 @@ function PriceCard() {
               </button>
               <button
                 type="button"
-                onClick={() => reset({ price_per_kg: product ? product.price_per_gram * 1000 : undefined })}
+                onClick={() => reset({ price_per_kg: product ? parseFloat((product.price_per_gram * 1000).toFixed(2)) : undefined })}
                 disabled={!isDirty}
                 className="px-4 py-2 text-sm rounded-lg text-[#9d7bc8] hover:bg-[#2d1550] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >

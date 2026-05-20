@@ -13,7 +13,7 @@ export function PriceDisplay() {
   const displayWeight = capturedWeight ?? currentWeight
   const previewAmount =
     !capturedWeight && currentWeight && pricePerGram
-      ? Math.round(currentWeight * pricePerGram * 100) / 100
+      ? Math.round((currentWeight * pricePerGram + Number.EPSILON) * 100) / 100
       : null
 
   function handleCapture() {
