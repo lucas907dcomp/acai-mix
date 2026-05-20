@@ -37,7 +37,9 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   isConfirming: false,
 
   captureWeight: (grams, pricePerGram) => {
-    const amount = Math.round((grams * pricePerGram + Number.EPSILON) * 100) / 100
+    const pricePerKgCents = Math.round(pricePerGram * 100_000)
+    const amountCents = Math.round((grams * pricePerKgCents) / 1_000)
+    const amount = amountCents / 100
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 
