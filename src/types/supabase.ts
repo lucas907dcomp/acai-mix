@@ -98,6 +98,135 @@ export type Database = {
           },
         ]
       }
+      sales: {
+        Row: {
+          amount: number
+          amount_received: number | null
+          change_returned: number | null
+          created_at: string
+          created_offline: boolean
+          id: string
+          location_id: string
+          payment_method: string
+          price_per_gram: number
+          shift_id: string
+          sync_reconciled: boolean
+          synced_at: string | null
+          weight_grams: number | null
+          weight_source: string
+        }
+        Insert: {
+          amount: number
+          amount_received?: number | null
+          change_returned?: number | null
+          created_at?: string
+          created_offline?: boolean
+          id: string
+          location_id: string
+          payment_method: string
+          price_per_gram: number
+          shift_id: string
+          sync_reconciled?: boolean
+          synced_at?: string | null
+          weight_grams?: number | null
+          weight_source: string
+        }
+        Update: {
+          amount?: number
+          amount_received?: number | null
+          change_returned?: number | null
+          created_at?: string
+          created_offline?: boolean
+          id?: string
+          location_id?: string
+          payment_method?: string
+          price_per_gram?: number
+          shift_id?: string
+          sync_reconciled?: boolean
+          synced_at?: string | null
+          weight_grams?: number | null
+          weight_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          id: string
+          location_id: string
+          opened_at: string
+          opened_by: string
+          sale_count: number
+          shift_number: number
+          status: string
+          total_card: number
+          total_cash: number
+          total_pix: number
+          total_sales: number
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          location_id: string
+          opened_at?: string
+          opened_by: string
+          sale_count?: number
+          shift_number: number
+          status?: string
+          total_card?: number
+          total_cash?: number
+          total_pix?: number
+          total_sales?: number
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          location_id?: string
+          opened_at?: string
+          opened_by?: string
+          sale_count?: number
+          shift_number?: number
+          status?: string
+          total_card?: number
+          total_cash?: number
+          total_pix?: number
+          total_sales?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           created_at: string
@@ -130,51 +259,46 @@ export type Database = {
           },
         ]
       }
-      shifts: {
+    }
+    Views: {
+      daily_summary: {
         Row: {
-          id: string
-          location_id: string
-          shift_number: number
-          opened_at: string
-          opened_by: string
+          avg_ticket: number | null
+          location_id: string | null
+          sale_date: string | null
+          total_amount: number | null
+          total_card: number | null
+          total_cash: number | null
+          total_pix: number | null
+          total_sales: number | null
+          total_shifts: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_summary: {
+        Row: {
+          avg_ticket: number | null
           closed_at: string | null
-          closed_by: string | null
-          status: string
-          total_sales: number
-          total_pix: number
-          total_card: number
-          total_cash: number
-          sale_count: number
-        }
-        Insert: {
-          id?: string
-          location_id: string
-          shift_number: number
-          opened_at?: string
-          opened_by: string
-          closed_at?: string | null
-          closed_by?: string | null
-          status?: string
-          total_sales?: number
-          total_pix?: number
-          total_card?: number
-          total_cash?: number
-          sale_count?: number
-        }
-        Update: {
-          id?: string
-          location_id?: string
-          shift_number?: number
-          opened_at?: string
-          opened_by?: string
-          closed_at?: string | null
-          closed_by?: string | null
-          status?: string
-          total_sales?: number
-          total_pix?: number
-          total_card?: number
-          total_cash?: number
-          sale_count?: number
+          duration_minutes: number | null
+          id: string | null
+          location_id: string | null
+          opened_at: string | null
+          opened_by: string | null
+          shift_number: number | null
+          status: string | null
+          total_amount: number | null
+          total_card: number | null
+          total_cash: number | null
+          total_pix: number | null
+          total_sales: number | null
         }
         Relationships: [
           {
@@ -186,85 +310,10 @@ export type Database = {
           },
         ]
       }
-      sales: {
-        Row: {
-          id: string
-          shift_id: string
-          location_id: string
-          weight_grams: number | null
-          weight_source: string
-          price_per_gram: number
-          amount: number
-          payment_method: 'pix' | 'credit' | 'debit' | 'cash'
-          amount_received: number | null
-          change_returned: number | null
-          sync_reconciled: boolean
-          synced_at: string | null
-          created_offline: boolean
-          created_at: string
-        }
-        Insert: {
-          id: string
-          shift_id: string
-          location_id: string
-          weight_grams?: number | null
-          weight_source: string
-          price_per_gram: number
-          amount: number
-          payment_method: 'pix' | 'credit' | 'debit' | 'cash'
-          amount_received?: number | null
-          change_returned?: number | null
-          sync_reconciled?: boolean
-          synced_at?: string | null
-          created_offline?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          shift_id?: string
-          location_id?: string
-          weight_grams?: number | null
-          weight_source?: string
-          price_per_gram?: number
-          amount?: number
-          payment_method?: string
-          amount_received?: number | null
-          change_returned?: number | null
-          sync_reconciled?: boolean
-          synced_at?: string | null
-          created_offline?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "shifts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      get_my_location_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_my_location_id: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
