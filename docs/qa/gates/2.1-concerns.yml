@@ -1,0 +1,21 @@
+storyId: "2.1"
+verdict: CONCERNS
+date: "2026-05-20"
+agent: "@qa"
+issues:
+  - severity: low
+    category: tests
+    description: "Sem testes unitários para useAuth e AuthProvider"
+    recommendation: "Cobrir com testes de integração em EPIC-07 (QA). Aceitável para MVP."
+  - severity: low
+    category: code
+    description: "handleForgotPassword usa URL hardcoded do Supabase em Login.tsx:18"
+    recommendation: "Mover para VITE_SUPABASE_URL + /auth/v1/recover em story futura. Funcional para MVP."
+checks:
+  code_review: PASS
+  unit_tests: WARN
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: PASS
+  security: PASS
+  documentation: PASS
