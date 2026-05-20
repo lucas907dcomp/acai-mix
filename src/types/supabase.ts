@@ -195,7 +195,7 @@ export type Database = {
           weight_source: string
           price_per_gram: number
           amount: number
-          payment_method: string
+          payment_method: 'pix' | 'credit' | 'debit' | 'cash'
           amount_received: number | null
           change_returned: number | null
           sync_reconciled: boolean
@@ -211,7 +211,7 @@ export type Database = {
           weight_source: string
           price_per_gram: number
           amount: number
-          payment_method: string
+          payment_method: 'pix' | 'credit' | 'debit' | 'cash'
           amount_received?: number | null
           change_returned?: number | null
           sync_reconciled?: boolean

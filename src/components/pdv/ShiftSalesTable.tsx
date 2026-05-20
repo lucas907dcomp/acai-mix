@@ -19,7 +19,8 @@ async function fetchShiftSales(shiftId: string): Promise<Sale[]> {
 
 const METHOD_LABEL: Record<string, string> = {
   pix: 'PIX',
-  card: 'Cartão',
+  credit: 'Crédito',
+  debit: 'Débito',
   cash: 'Dinheiro',
 }
 

@@ -1,4 +1,4 @@
-export type PaymentMethod = 'pix' | 'card' | 'cash'
+export type PaymentMethod = 'pix' | 'credit' | 'debit' | 'cash'
 
 export type UserRole = 'admin' | 'staff'
 

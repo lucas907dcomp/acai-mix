@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
-import type { Shift } from '@/types'
+import type { PaymentMethod, Shift } from '@/types'
 
 interface ShiftState {
   activeShift: Shift | null
@@ -10,7 +10,7 @@ interface ShiftState {
   loadActiveShift: (locationId: string) => Promise<void>
   openShift: (locationId: string, openedBy: string) => Promise<void>
   closeShift: (closedBy: string) => Promise<void>
-  updateTotals: (amount: number, paymentMethod: 'pix' | 'card' | 'cash') => void
+  updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
   clearShift: () => void
 }
 
@@ -96,6 +96,8 @@ export const useShiftStore = create<ShiftState>()(
         const { activeShift } = get()
         if (!activeShift) return
 
+        const isCard = paymentMethod === 'credit' || paymentMethod === 'debit'
+
         set({
           activeShift: {
             ...activeShift,
@@ -105,10 +107,9 @@ export const useShiftStore = create<ShiftState>()(
               paymentMethod === 'pix'
                 ? Math.round((activeShift.total_pix + amount) * 100) / 100
                 : activeShift.total_pix,
-            total_card:
-              paymentMethod === 'card'
-                ? Math.round((activeShift.total_card + amount) * 100) / 100
-                : activeShift.total_card,
+            total_card: isCard
+              ? Math.round((activeShift.total_card + amount) * 100) / 100
+              : activeShift.total_card,
             total_cash:
               paymentMethod === 'cash'
                 ? Math.round((activeShift.total_cash + amount) * 100) / 100
