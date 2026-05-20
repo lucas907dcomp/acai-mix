@@ -3,7 +3,7 @@ import { useScale } from '@/hooks/useScale'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSaleStore } from '@/stores/saleStore'
-import { ShiftStatusBar } from '@/components/pdv/ShiftStatusBar'
+import { ShiftStatusBar } from '@/components/shifts/ShiftStatusBar'
 import { ShiftOpenScreen } from '@/components/pdv/ShiftOpenScreen'
 import { ScaleConnectionStatus } from '@/components/pdv/ScaleConnectionStatus'
 import { WeightDisplay } from '@/components/pdv/WeightDisplay'
@@ -20,6 +20,8 @@ export default function POS() {
   const activeShift = useShiftStore((s) => s.activeShift)
   const isShiftLoading = useShiftStore((s) => s.isLoading)
   const loadActiveShift = useShiftStore((s) => s.loadActiveShift)
+  const startPolling = useShiftStore((s) => s.startPolling)
+  const stopPolling = useShiftStore((s) => s.stopPolling)
   const paymentMethod = useSaleStore((s) => s.paymentMethod)
 
   useEffect(() => {
@@ -27,6 +29,13 @@ export default function POS() {
       loadActiveShift(profile.location_id)
     }
   }, [profile?.location_id, activeShift, loadActiveShift])
+
+  useEffect(() => {
+    if (profile?.location_id && activeShift?.id) {
+      startPolling(profile.location_id)
+    }
+    return () => stopPolling()
+  }, [profile?.location_id, activeShift?.id, startPolling, stopPolling])
 
   if (isShiftLoading && !activeShift) {
     return (

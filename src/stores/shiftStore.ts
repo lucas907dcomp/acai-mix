@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import type { PaymentMethod, Shift } from '@/types'
 
@@ -12,12 +13,16 @@ interface ShiftState {
   closeShift: (closedBy: string) => Promise<void>
   updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
   clearShift: () => void
+  startPolling: (locationId: string) => void
+  stopPolling: () => void
 }
 
 function getShiftNumber(): 1 | 2 {
   const hour = new Date().getHours()
   return hour < 16 ? 1 : 2
 }
+
+let _pollingInterval: ReturnType<typeof setInterval> | null = null
 
 export const useShiftStore = create<ShiftState>()(
   persist(
@@ -119,6 +124,29 @@ export const useShiftStore = create<ShiftState>()(
       },
 
       clearShift: () => set({ activeShift: null }),
+
+      startPolling: (locationId: string) => {
+        if (_pollingInterval) clearInterval(_pollingInterval)
+        _pollingInterval = setInterval(async () => {
+          const prevShift = get().activeShift
+          try {
+            await get().loadActiveShift(locationId)
+          } catch {
+            return
+          }
+          const nextShift = get().activeShift
+          if (prevShift && !nextShift) {
+            toast.info('Turno encerrado automaticamente. Inicie um novo turno para continuar.')
+          }
+        }, 60_000)
+      },
+
+      stopPolling: () => {
+        if (_pollingInterval) {
+          clearInterval(_pollingInterval)
+          _pollingInterval = null
+        }
+      },
     }),
     {
       name: 'acaimix-shift',

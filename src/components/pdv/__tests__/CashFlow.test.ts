@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getQuickValues } from '../CashFlow'
+import { getQuickValues } from '@/lib/quickValues'
 
 describe('getQuickValues', () => {
   it('R$22,43 → [25, 30, 40, 50, 100]', () => {
