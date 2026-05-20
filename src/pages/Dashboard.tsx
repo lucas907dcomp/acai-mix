@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { ShiftBreakdown } from '@/components/dashboard/ShiftBreakdown'
+import { PaymentBreakdown } from '@/components/dashboard/PaymentBreakdown'
 import { useTodayAndYesterday, useDailySummary } from '@/hooks/dashboard'
 import type { DatePeriod } from '@/types/dashboard'
 
@@ -45,9 +46,27 @@ export default function Dashboard() {
     (acc, d) => ({
       sales: acc.sales + Number(d.total_sales),
       amount: acc.amount + Number(d.total_amount),
+      pix: acc.pix + Number(d.total_pix),
+      card: acc.card + Number(d.total_card),
+      cash: acc.cash + Number(d.total_cash),
     }),
-    { sales: 0, amount: 0 }
+    { sales: 0, amount: 0, pix: 0, card: 0, cash: 0 }
   )
+
+  const paymentTotals =
+    period === 'today'
+      ? {
+          pix: Number(todayRow?.total_pix ?? 0),
+          card: Number(todayRow?.total_card ?? 0),
+          cash: Number(todayRow?.total_cash ?? 0),
+          total: Number(todayRow?.total_amount ?? 0),
+        }
+      : {
+          pix: periodTotals.pix,
+          card: periodTotals.card,
+          cash: periodTotals.cash,
+          total: periodTotals.amount,
+        }
 
   const periodAvgTicket =
     periodTotals.sales > 0 ? periodTotals.amount / periodTotals.sales : 0
@@ -149,6 +168,15 @@ export default function Dashboard() {
           isLoading={isLoading}
         />
       </div>
+
+      {/* Payment breakdown */}
+      <PaymentBreakdown
+        pix={paymentTotals.pix}
+        card={paymentTotals.card}
+        cash={paymentTotals.cash}
+        total={paymentTotals.total}
+        isLoading={isLoading}
+      />
 
       {/* Sales chart */}
       <SalesChart locationId={locationId} period={period} />
