@@ -16,10 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const priceSchema = z.object({
   price_per_gram: z
-    .number({
-      required_error: 'Preço é obrigatório',
-      invalid_type_error: 'Informe um número válido',
-    })
+    .number()
     .min(0.001, 'Preço mínimo: R$0,001/g')
     .max(1.0, 'Preço máximo: R$1,00/g'),
 })
