@@ -29,6 +29,21 @@ export function useScale() {
   }, [setProvider, updateWeight, updateConnection, disconnect])
 }
 
+export function useReconnectSerial() {
+  const { setProvider, updateWeight, updateConnection, disconnect } = useScaleStore()
+
+  async function reconnectSerial() {
+    disconnect()
+    const provider = new SerialScaleProvider()
+    setProvider(provider)
+    provider.onWeight(updateWeight)
+    provider.onConnectionChange(updateConnection)
+    await provider.connect()
+  }
+
+  return { reconnectSerial }
+}
+
 export function useSwitchToManual() {
   const { setProvider, updateWeight, updateConnection, closeManualDialog } = useScaleStore()
 

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useSaleStore } from '@/stores/saleStore'
+import { usePricePerGram } from '@/hooks/usePricePerGram'
 import type { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 
 interface ManualWeightInputProps {
@@ -10,6 +12,8 @@ interface ManualWeightInputProps {
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
   const [raw, setRaw] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const captureWeight = useSaleStore((s) => s.captureWeight)
+  const { data: pricePerGram } = usePricePerGram()
 
   function handleConfirm() {
     const grams = parseFloat(raw)
@@ -23,7 +27,13 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
       return
     }
 
-    provider.setWeight(Math.round(grams))
+    const rounded = Math.round(grams)
+    provider.setWeight(rounded)
+
+    if (pricePerGram) {
+      captureWeight(rounded, pricePerGram)
+    }
+
     setRaw('')
     setError(null)
   }
@@ -51,6 +61,7 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
         className="text-4xl h-16 text-center font-bold bg-[#0f0720] border-[#2d1550] text-white placeholder:text-[#4a3570] focus-visible:ring-[#4c1e8c]"
         aria-label="Peso manual em gramas"
         aria-describedby={error ? 'weight-error' : undefined}
+        autoFocus
       />
       {error && (
         <p id="weight-error" className="text-sm text-red-400" role="alert">
@@ -59,7 +70,8 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
       )}
       <Button
         onClick={handleConfirm}
-        className="h-14 text-lg bg-[#4c1e8c] hover:bg-[#5d2aaa] text-white"
+        disabled={!raw || !pricePerGram}
+        className="h-14 text-lg bg-[#4c1e8c] hover:bg-[#5d2aaa] disabled:opacity-40 text-white"
       >
         Confirmar Peso
       </Button>

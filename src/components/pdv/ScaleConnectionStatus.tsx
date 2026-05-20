@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useScaleStore } from '@/stores/scaleStore'
+import { useReconnectSerial } from '@/hooks/useScale'
 
 export function ScaleConnectionStatus() {
   const isConnected = useScaleStore((s) => s.isConnected)
   const providerType = useScaleStore((s) => s.providerType)
   const openManualDialog = useScaleStore((s) => s.openManualDialog)
-  const connectScale = useScaleStore((s) => s.connectScale)
+  const { reconnectSerial } = useReconnectSerial()
   const [isConnecting, setIsConnecting] = useState(false)
 
   const badge =
@@ -15,10 +16,13 @@ export function ScaleConnectionStatus() {
         ? { label: 'Balança Conectada', color: 'bg-green-500/20 text-green-400 border-green-500/30' }
         : { label: 'Balança Desconectada', color: 'bg-red-500/20 text-red-400 border-red-500/30' }
 
+  const showConnectButton =
+    providerType === 'manual' || (providerType === 'serial' && !isConnected)
+
   async function handleConnect() {
     setIsConnecting(true)
     try {
-      await connectScale()
+      await reconnectSerial()
     } catch {
       // User cancelled port selection or connection failed — silent
     } finally {
@@ -36,7 +40,7 @@ export function ScaleConnectionStatus() {
         {badge.label}
       </span>
 
-      {!isConnected && providerType === 'serial' && (
+      {showConnectButton && (
         <button
           onClick={handleConnect}
           disabled={isConnecting}
