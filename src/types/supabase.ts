@@ -137,6 +137,8 @@ export type Database = {
         Row: {
           amount: number
           amount_received: number | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           change_returned: number | null
           created_at: string
           created_offline: boolean
@@ -145,6 +147,7 @@ export type Database = {
           payment_method: string
           price_per_gram: number
           shift_id: string
+          status: string
           sync_reconciled: boolean
           synced_at: string | null
           weight_grams: number | null
@@ -153,6 +156,8 @@ export type Database = {
         Insert: {
           amount: number
           amount_received?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           change_returned?: number | null
           created_at?: string
           created_offline?: boolean
@@ -161,6 +166,7 @@ export type Database = {
           payment_method: string
           price_per_gram: number
           shift_id: string
+          status?: string
           sync_reconciled?: boolean
           synced_at?: string | null
           weight_grams?: number | null
@@ -169,6 +175,8 @@ export type Database = {
         Update: {
           amount?: number
           amount_received?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           change_returned?: number | null
           created_at?: string
           created_offline?: boolean
@@ -177,6 +185,7 @@ export type Database = {
           payment_method?: string
           price_per_gram?: number
           shift_id?: string
+          status?: string
           sync_reconciled?: boolean
           synced_at?: string | null
           weight_grams?: number | null
@@ -347,6 +356,7 @@ export type Database = {
       }
     }
     Functions: {
+      can_cancel_sale: { Args: { p_sale_id: string }; Returns: boolean }
       get_my_location_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
     }
