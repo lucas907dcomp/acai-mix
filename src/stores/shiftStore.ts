@@ -13,6 +13,7 @@ interface ShiftState {
   openShift: (locationId: string, openedBy: string) => Promise<void>
   closeShift: (closedBy: string) => Promise<void>
   updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
+  reverseTotals: (amount: number, paymentMethod: PaymentMethod) => void
   clearShift: () => void
   startPolling: (locationId: string) => void
   stopPolling: () => void
@@ -121,6 +122,30 @@ export const useShiftStore = create<ShiftState>()(
             total_cash:
               paymentMethod === 'cash'
                 ? Math.round((activeShift.total_cash + amount) * 100) / 100
+                : activeShift.total_cash,
+          },
+        })
+      },
+
+      reverseTotals: (amount, paymentMethod) => {
+        const { activeShift } = get()
+        if (!activeShift) return
+        const isCard = paymentMethod === 'credit' || paymentMethod === 'debit'
+        set({
+          activeShift: {
+            ...activeShift,
+            sale_count: Math.max(activeShift.sale_count - 1, 0),
+            total_sales: Math.max(Math.round((activeShift.total_sales - amount) * 100) / 100, 0),
+            total_pix:
+              paymentMethod === 'pix'
+                ? Math.max(Math.round((activeShift.total_pix - amount) * 100) / 100, 0)
+                : activeShift.total_pix,
+            total_card: isCard
+              ? Math.max(Math.round((activeShift.total_card - amount) * 100) / 100, 0)
+              : activeShift.total_card,
+            total_cash:
+              paymentMethod === 'cash'
+                ? Math.max(Math.round((activeShift.total_cash - amount) * 100) / 100, 0)
                 : activeShift.total_cash,
           },
         })
