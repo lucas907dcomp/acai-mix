@@ -99,8 +99,11 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       created_at: new Date().toISOString(),
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { status: _s, cancelled_at: _ca, cancelled_by: _cb, ...saleInsert } = sale
+
     try {
-      const { error } = await supabase.from('sales').insert(sale)
+      const { error } = await supabase.from('sales').insert(saleInsert)
       if (error) throw error
 
       useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
