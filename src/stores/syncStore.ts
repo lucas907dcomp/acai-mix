@@ -6,14 +6,16 @@ import { db } from '@/providers/sync/DexieDatabase'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { Sale, Shift } from '@/types'
-import type { ProvisionalShift } from '@/providers/sync/DexieDatabase'
+import type { PendingSale, ProvisionalShift } from '@/providers/sync/DexieDatabase'
 
 interface SyncState {
   isOnline: boolean
   pendingCount: number
+  pendingSales: PendingSale[]
   isSyncing: boolean
   lastSoftCloseAt: number | null
   addPending: (sale: Sale) => Promise<void>
+  cancelPending: (saleId: string) => Promise<void>
   drain: () => Promise<void>
   initListeners: () => void
   startClockWatch: () => void
@@ -27,12 +29,13 @@ let _listenersAttached = false
 export const useSyncStore = create<SyncState>((set, get) => ({
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   pendingCount: 0,
+  pendingSales: [],
   isSyncing: false,
   lastSoftCloseAt: null,
 
   refreshPendingCount: async () => {
-    const count = await db.pending_sales.filter((s) => !s.synced).count()
-    set({ pendingCount: count })
+    const unsyncedSales = await db.pending_sales.filter((s) => !s.synced).sortBy('created_at')
+    set({ pendingCount: unsyncedSales.length, pendingSales: unsyncedSales })
   },
 
   addPending: async (sale: Sale) => {
@@ -43,6 +46,23 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       sync_attempts: 0,
     })
     await get().refreshPendingCount()
+  },
+
+  cancelPending: async (saleId: string) => {
+    if (get().isSyncing) {
+      toast.error('Sincronização em andamento. Aguarde e tente novamente.')
+      return
+    }
+    const sale = await db.pending_sales.where('id').equals(saleId).first()
+    if (!sale) return
+    if (sale.synced) {
+      toast.error('Esta venda já foi sincronizada. Cancele pelo Histórico de Vendas.')
+      return
+    }
+    await db.pending_sales.where('id').equals(saleId).delete()
+    useShiftStore.getState().reverseTotals(sale.amount, sale.payment_method)
+    await get().refreshPendingCount()
+    toast.success('Venda offline removida.')
   },
 
   _createProvisionalShift: async (locationId: string) => {
