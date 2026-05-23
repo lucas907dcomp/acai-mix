@@ -38,6 +38,7 @@ export class SerialScaleProvider implements IScaleProvider {
       if (gotData) {
         this.confirmedBaud = baud
         console.log(`[Scale] ✅ baud rate confirmed: ${baud}`)
+        this.port!.addEventListener('disconnect', () => this.handleDisconnect())
         this.connectionCallbacks.forEach((cb) => cb(true))
         this.startReadLoop()
         this.startPolling()
@@ -49,6 +50,7 @@ export class SerialScaleProvider implements IScaleProvider {
     console.log('[Scale] auto-scan exhausted — connecting at 9600, check scale settings')
     this.confirmedBaud = 9600
     await this.openAt(9600)
+    this.port!.addEventListener('disconnect', () => this.handleDisconnect())
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
     this.startPolling()
