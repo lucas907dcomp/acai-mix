@@ -27,7 +27,10 @@ export class SerialScaleProvider implements IScaleProvider {
     }
 
     this.port = await navigator.serial.requestPort()
-    await this.port.open({ baudRate: BAUD_RATE })
+    await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
+    // DTR=true is required by many scales to start continuous output
+    await this.port.setSignals({ dataTerminalReady: true, requestToSend: false })
+    console.log('[Scale] port opened, DTR set, baud:', BAUD_RATE)
     this.reconnectAttempts = 0
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
@@ -55,7 +58,11 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private startReadLoop(): void {
-    if (!this.port?.readable) return
+    if (!this.port?.readable) {
+      console.log('[Scale] ERROR: port.readable is null — cannot start read loop')
+      return
+    }
+    console.log('[Scale] startReadLoop called')
     this.reader = this.port.readable.getReader()
     this.readLoopActive = true
     this.readLoop()
@@ -63,11 +70,12 @@ export class SerialScaleProvider implements IScaleProvider {
 
   private async readLoop(): Promise<void> {
     const buffer: number[] = []
+    console.log('[Scale] readLoop running, waiting for data...')
 
     try {
       while (this.readLoopActive && this.reader) {
         const { value, done } = await this.reader.read()
-        if (done) break
+        if (done) { console.log('[Scale] reader done'); break }
 
         // DEBUG — remove after protocol is confirmed
         const hex = Array.from(value).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
