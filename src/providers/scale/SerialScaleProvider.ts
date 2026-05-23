@@ -1,9 +1,8 @@
 import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 
-// UPX Wind D3 protocol (validated at installation):
-// Packet: STX (0x02) + 6 ASCII digits (weight in grams, zero-padded) + unit char + CR + LF
-// Example: 0x02 "000500" "g" 0x0D 0x0A → 500 grams
+// UPX Wind D3 — protocol to be confirmed at installation
 // Baud rate: 9600, Data bits: 8, Stop bits: 1, Parity: None
+// Scale operates in demand mode: responds to CR (0x0D) with current weight
 const BAUD_RATE = 9600
 const PACKET_LENGTH = 10 // STX + 6 digits + unit + CR + LF
 const STX = 0x02
@@ -16,6 +15,7 @@ export class SerialScaleProvider implements IScaleProvider {
   private port: SerialPort | null = null
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private readLoopActive = false
+  private pollInterval: ReturnType<typeof setInterval> | null = null
   private reconnectAttempts = 0
   private readonly maxReconnectAttempts = 3
 
@@ -28,19 +28,21 @@ export class SerialScaleProvider implements IScaleProvider {
 
     this.port = await navigator.serial.requestPort()
     await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
-    // DTR=true is required by many scales to start continuous output
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
     console.log('[Scale] port opened, DTR set, baud:', BAUD_RATE)
+
     this.reconnectAttempts = 0
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
+    this.startPolling()
 
     this.port.addEventListener('disconnect', () => this.handleDisconnect())
   }
 
   disconnect(): void {
     this.readLoopActive = false
+    if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null }
     this.reader?.cancel().catch(() => {})
     this.port?.close().catch(() => {})
     this.port = null
@@ -58,9 +60,28 @@ export class SerialScaleProvider implements IScaleProvider {
     return () => this.connectionCallbacks.delete(callback)
   }
 
+  // Sends CR to request weight — works for demand-mode scales
+  private async sendCommand(bytes: number[]): Promise<void> {
+    if (!this.port?.writable) return
+    const writer = this.port.writable.getWriter()
+    try {
+      await writer.write(new Uint8Array(bytes))
+    } finally {
+      writer.releaseLock()
+    }
+  }
+
+  // Polls the scale every 300ms with CR — covers demand-mode and continuous-mode scales
+  private startPolling(): void {
+    console.log('[Scale] starting poll (CR every 300ms)')
+    this.pollInterval = setInterval(() => {
+      this.sendCommand([0x0D]).catch(() => {})
+    }, 300)
+  }
+
   private startReadLoop(): void {
     if (!this.port?.readable) {
-      console.log('[Scale] ERROR: port.readable is null — cannot start read loop')
+      console.log('[Scale] ERROR: port.readable is null')
       return
     }
     console.log('[Scale] startReadLoop called')
@@ -86,7 +107,6 @@ export class SerialScaleProvider implements IScaleProvider {
 
         for (const byte of value) {
           buffer.push(byte)
-          // Keep buffer to last PACKET_LENGTH bytes
           if (buffer.length > PACKET_LENGTH) buffer.shift()
 
           if (buffer.length === PACKET_LENGTH) {
@@ -98,7 +118,7 @@ export class SerialScaleProvider implements IScaleProvider {
         }
       }
     } catch {
-      // Read error — let handleDisconnect manage reconnection
+      // Read error — handleDisconnect manages reconnection
     } finally {
       this.reader?.releaseLock()
       this.reader = null
@@ -115,6 +135,7 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private async handleDisconnect(): Promise<void> {
+    if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null }
     this.connectionCallbacks.forEach((cb) => cb(false))
 
     while (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -128,14 +149,14 @@ export class SerialScaleProvider implements IScaleProvider {
           this.reconnectAttempts = 0
           this.connectionCallbacks.forEach((cb) => cb(true))
           this.startReadLoop()
+          this.startPolling()
           return
         }
       } catch {
-        // Retry on next iteration
+        // retry
       }
     }
 
-    // Max reconnect attempts exhausted
     this.connectionCallbacks.forEach((cb) => cb(false))
   }
 }
