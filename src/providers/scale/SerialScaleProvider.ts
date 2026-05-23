@@ -69,6 +69,12 @@ export class SerialScaleProvider implements IScaleProvider {
         const { value, done } = await this.reader.read()
         if (done) break
 
+        // DEBUG — remove after protocol is confirmed
+        const hex = Array.from(value).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
+        const str = String.fromCharCode(...Array.from(value))
+        console.log('[Scale] raw hex:', hex)
+        console.log('[Scale] raw str:', JSON.stringify(str))
+
         for (const byte of value) {
           buffer.push(byte)
           // Keep buffer to last PACKET_LENGTH bytes
