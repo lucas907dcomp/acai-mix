@@ -29,7 +29,8 @@ export class SerialScaleProvider implements IScaleProvider {
     this.port = await navigator.serial.requestPort()
     await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
     // DTR=true is required by many scales to start continuous output
-    await this.port.setSignals({ dataTerminalReady: true, requestToSend: false })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
     console.log('[Scale] port opened, DTR set, baud:', BAUD_RATE)
     this.reconnectAttempts = 0
     this.connectionCallbacks.forEach((cb) => cb(true))
