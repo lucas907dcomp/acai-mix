@@ -1,11 +1,10 @@
 import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 
-// UPX Wind D3 — protocol to be confirmed at installation
-// Baud rate: 9600, Data bits: 8, Stop bits: 1, Parity: None
-// Scale operates in demand mode: responds to CR (0x0D) with current weight
-const BAUD_RATE = 9600
-const PACKET_LENGTH = 10 // STX + 6 digits + unit + CR + LF
+// Baud rates to try in order during auto-scan
+const BAUD_CANDIDATES = [9600, 4800, 2400, 19200]
+const PACKET_LENGTH = 10
 const STX = 0x02
+const SCAN_TIMEOUT_MS = 2500 // time to wait per baud rate
 
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
@@ -16,6 +15,7 @@ export class SerialScaleProvider implements IScaleProvider {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private readLoopActive = false
   private pollInterval: ReturnType<typeof setInterval> | null = null
+  private confirmedBaud: number | null = null
   private reconnectAttempts = 0
   private readonly maxReconnectAttempts = 3
 
@@ -27,17 +27,96 @@ export class SerialScaleProvider implements IScaleProvider {
     }
 
     this.port = await navigator.serial.requestPort()
-    await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
-    console.log('[Scale] port opened, DTR set, baud:', BAUD_RATE)
+    await this.scanBaudRates()
+  }
 
-    this.reconnectAttempts = 0
+  // Try each baud rate for SCAN_TIMEOUT_MS, stop at first one that produces data
+  private async scanBaudRates(): Promise<void> {
+    for (const baud of BAUD_CANDIDATES) {
+      console.log(`[Scale] trying baud rate ${baud}...`)
+      const gotData = await this.tryBaud(baud)
+      if (gotData) {
+        this.confirmedBaud = baud
+        console.log(`[Scale] ✅ baud rate confirmed: ${baud}`)
+        this.connectionCallbacks.forEach((cb) => cb(true))
+        this.startReadLoop()
+        this.startPolling()
+        return
+      }
+      console.log(`[Scale] no response at ${baud}, trying next...`)
+    }
+    // No baud rate worked — connect anyway at 9600 (data may come later or protocol differs)
+    console.log('[Scale] auto-scan exhausted — connecting at 9600, check scale settings')
+    this.confirmedBaud = 9600
+    await this.openAt(9600)
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
     this.startPolling()
+  }
 
-    this.port.addEventListener('disconnect', () => this.handleDisconnect())
+  private async openAt(baud: number): Promise<void> {
+    if (!this.port) return
+    await this.port.open({ baudRate: baud, dataBits: 8, stopBits: 1, parity: 'none' })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
+  }
+
+  private async closePort(): Promise<void> {
+    this.readLoopActive = false
+    if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null }
+    try { await this.reader?.cancel() } catch { /* ignore */ }
+    this.reader = null
+    try { await this.port?.close() } catch { /* ignore */ }
+  }
+
+  // Opens at given baud, polls with CR for SCAN_TIMEOUT_MS, returns true if any data received
+  private async tryBaud(baud: number): Promise<boolean> {
+    if (!this.port) return false
+    try {
+      await this.openAt(baud)
+    } catch {
+      console.log(`[Scale] failed to open at ${baud}`)
+      return false
+    }
+
+    let gotData = false
+
+    // Start a temporary reader
+    const reader = this.port.readable!.getReader()
+    const readPromise = (async () => {
+      try {
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          if (value && value.length > 0) {
+            const hex = Array.from(value).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
+            const str = String.fromCharCode(...Array.from(value))
+            console.log(`[Scale] @${baud} raw hex:`, hex)
+            console.log(`[Scale] @${baud} raw str:`, JSON.stringify(str))
+            gotData = true
+          }
+        }
+      } catch { /* cancelled */ }
+      finally { reader.releaseLock() }
+    })()
+
+    // Poll with CR during the scan window
+    const pollHandle = setInterval(() => {
+      if (this.port?.writable) {
+        const writer = this.port.writable.getWriter()
+        writer.write(new Uint8Array([0x0D])).finally(() => writer.releaseLock())
+      }
+    }, 300)
+
+    await new Promise((resolve) => setTimeout(resolve, SCAN_TIMEOUT_MS))
+    clearInterval(pollHandle)
+    await reader.cancel().catch(() => {})
+    await readPromise
+
+    // Close to allow reopening at different baud
+    await this.closePort()
+    // Re-acquire reference after close
+    return gotData
   }
 
   disconnect(): void {
@@ -60,18 +139,13 @@ export class SerialScaleProvider implements IScaleProvider {
     return () => this.connectionCallbacks.delete(callback)
   }
 
-  // Sends CR to request weight — works for demand-mode scales
   private async sendCommand(bytes: number[]): Promise<void> {
     if (!this.port?.writable) return
     const writer = this.port.writable.getWriter()
-    try {
-      await writer.write(new Uint8Array(bytes))
-    } finally {
-      writer.releaseLock()
-    }
+    try { await writer.write(new Uint8Array(bytes)) }
+    finally { writer.releaseLock() }
   }
 
-  // Polls the scale every 300ms with CR — covers demand-mode and continuous-mode scales
   private startPolling(): void {
     console.log('[Scale] starting poll (CR every 300ms)')
     this.pollInterval = setInterval(() => {
@@ -84,7 +158,7 @@ export class SerialScaleProvider implements IScaleProvider {
       console.log('[Scale] ERROR: port.readable is null')
       return
     }
-    console.log('[Scale] startReadLoop called')
+    console.log('[Scale] startReadLoop called at baud', this.confirmedBaud)
     this.reader = this.port.readable.getReader()
     this.readLoopActive = true
     this.readLoop()
@@ -92,14 +166,14 @@ export class SerialScaleProvider implements IScaleProvider {
 
   private async readLoop(): Promise<void> {
     const buffer: number[] = []
-    console.log('[Scale] readLoop running, waiting for data...')
+    console.log('[Scale] readLoop running...')
 
     try {
       while (this.readLoopActive && this.reader) {
         const { value, done } = await this.reader.read()
         if (done) { console.log('[Scale] reader done'); break }
 
-        // DEBUG — remove after protocol is confirmed
+        // DEBUG — remove after protocol confirmed
         const hex = Array.from(value).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
         const str = String.fromCharCode(...Array.from(value))
         console.log('[Scale] raw hex:', hex)
@@ -108,17 +182,14 @@ export class SerialScaleProvider implements IScaleProvider {
         for (const byte of value) {
           buffer.push(byte)
           if (buffer.length > PACKET_LENGTH) buffer.shift()
-
           if (buffer.length === PACKET_LENGTH) {
             const weight = this.parsePacket(buffer)
-            if (weight !== null) {
-              this.weightCallbacks.forEach((cb) => cb(weight))
-            }
+            if (weight !== null) this.weightCallbacks.forEach((cb) => cb(weight))
           }
         }
       }
     } catch {
-      // Read error — handleDisconnect manages reconnection
+      // handled by disconnect
     } finally {
       this.reader?.releaseLock()
       this.reader = null
@@ -128,7 +199,6 @@ export class SerialScaleProvider implements IScaleProvider {
   private parsePacket(buffer: number[]): number | null {
     if (buffer[0] !== STX) return null
     if (buffer[8] !== 0x0d || buffer[9] !== 0x0a) return null
-
     const weightStr = String.fromCharCode(...buffer.slice(1, 7))
     const grams = parseInt(weightStr, 10)
     return isNaN(grams) ? null : grams
@@ -140,23 +210,18 @@ export class SerialScaleProvider implements IScaleProvider {
 
     while (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++
-      const delay = Math.pow(2, this.reconnectAttempts - 1) * 1000
-      await new Promise((resolve) => setTimeout(resolve, delay))
-
+      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, this.reconnectAttempts - 1) * 1000))
       try {
         if (this.port) {
-          await this.port.open({ baudRate: BAUD_RATE })
+          await this.port.open({ baudRate: this.confirmedBaud ?? 9600 })
           this.reconnectAttempts = 0
           this.connectionCallbacks.forEach((cb) => cb(true))
           this.startReadLoop()
           this.startPolling()
           return
         }
-      } catch {
-        // retry
-      }
+      } catch { /* retry */ }
     }
-
     this.connectionCallbacks.forEach((cb) => cb(false))
   }
 }
