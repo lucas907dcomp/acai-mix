@@ -101,7 +101,12 @@ export function UnitSaleModal({ product, open, onClose }: Props) {
         toast.error('Sem conexão. Venda salva offline.')
         handleClose()
       } else {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+        const msg =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err !== null && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : 'Erro desconhecido'
         toast.error(`Erro ao confirmar venda: ${msg}`)
       }
     } finally {

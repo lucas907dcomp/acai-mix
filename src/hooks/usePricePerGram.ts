@@ -14,6 +14,7 @@ export function usePricePerGram() {
         .select('price_per_gram')
         .eq('active', true)
         .eq('location_id', locationId)
+        .eq('product_type', 'weight')
         .order('updated_at', { ascending: false })
         .limit(1)
         .single()
