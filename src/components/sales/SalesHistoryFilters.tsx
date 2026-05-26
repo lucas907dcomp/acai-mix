@@ -1,4 +1,5 @@
 import type { PaymentMethod, SaleStatus } from '@/types'
+import type { ProductOption } from '@/hooks/useHistoryProductOptions'
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: 'pix', label: 'PIX' },
@@ -17,12 +18,15 @@ interface SalesHistoryFiltersProps {
   to: Date
   paymentMethods: PaymentMethod[]
   statuses: SaleStatus[]
+  productIds: string[]
+  productOptions: ProductOption[]
   page: number
   totalPages: number
   onFromChange: (d: Date) => void
   onToChange: (d: Date) => void
   onPaymentMethodsChange: (v: PaymentMethod[]) => void
   onStatusesChange: (v: SaleStatus[]) => void
+  onProductIdsChange: (v: string[]) => void
   onPageChange: (p: number) => void
   onClearFilters: () => void
 }
@@ -36,9 +40,9 @@ function fromInputValue(s: string): Date {
 }
 
 export function SalesHistoryFilters({
-  from, to, paymentMethods, statuses, page, totalPages,
+  from, to, paymentMethods, statuses, productIds, productOptions, page, totalPages,
   onFromChange, onToChange, onPaymentMethodsChange, onStatusesChange,
-  onPageChange, onClearFilters,
+  onProductIdsChange, onPageChange, onClearFilters,
 }: SalesHistoryFiltersProps) {
   function togglePayment(value: PaymentMethod) {
     onPaymentMethodsChange(
@@ -53,6 +57,14 @@ export function SalesHistoryFilters({
       statuses.includes(value)
         ? statuses.filter((v) => v !== value)
         : [...statuses, value]
+    )
+  }
+
+  function toggleProduct(id: string) {
+    onProductIdsChange(
+      productIds.includes(id)
+        ? productIds.filter((v) => v !== id)
+        : [...productIds, id]
     )
   }
 
@@ -120,6 +132,33 @@ export function SalesHistoryFilters({
             ))}
           </div>
         </div>
+
+        {productOptions.length > 0 && (
+          <div className="space-y-1">
+            <label className="text-xs text-[#9d7bc8]">Produto</label>
+            <div className="flex gap-2 flex-wrap">
+              {productOptions.map(({ id, name, active }) => (
+                <label
+                  key={id}
+                  className="flex items-center gap-1.5 cursor-pointer text-sm text-[#9d7bc8] hover:text-white"
+                >
+                  <input
+                    type="checkbox"
+                    checked={productIds.length === 0 || productIds.includes(id)}
+                    onChange={() => toggleProduct(id)}
+                    className="accent-[#4c1e8c]"
+                  />
+                  {name}
+                  {!active && (
+                    <span className="text-[10px] text-[#4a3570] border border-[#2d1550] rounded px-1">
+                      Inativo
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           onClick={onClearFilters}

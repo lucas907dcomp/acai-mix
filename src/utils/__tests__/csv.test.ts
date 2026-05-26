@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { buildCsvString } from '../csv'
-import type { Sale } from '@/types'
+import type { SaleWithProduct } from '@/types'
 
-function makeSale(overrides: Partial<Sale> = {}): Sale {
+function makeSale(overrides: Partial<SaleWithProduct> = {}): SaleWithProduct {
   return {
     id: 'abc',
     shift_id: 's1',
@@ -21,6 +21,9 @@ function makeSale(overrides: Partial<Sale> = {}): Sale {
     status: 'COMPLETED',
     cancelled_at: null,
     cancelled_by: null,
+    has_casquinha: false,
+    quantity: 1,
+    products: { name: 'Açaí', product_type: 'weight' },
     ...overrides,
   }
 }
@@ -34,7 +37,38 @@ describe('buildCsvString', () => {
   it('cabeçalho usa separador ponto-e-vírgula', () => {
     const csv = buildCsvString([])
     const header = csv.split('\n')[0]
-    expect(header).toBe('﻿Data/Hora;Peso (g);Preço/g (R$);Valor (R$);Pagamento;Status')
+    expect(header).toBe('﻿Data/Hora;Peso (g);Preço/g (R$);Valor (R$);Pagamento;Status;Produto;Tipo;Quantidade;Casquinha')
+  })
+
+  it('colunas legadas preservadas nas posições originais (sem reordenação)', () => {
+    const csv = buildCsvString([makeSale()])
+    const cols = csv.split('\n')[0].replace('﻿', '').split(';')
+    expect(cols[0]).toBe('Data/Hora')
+    expect(cols[1]).toBe('Peso (g)')
+    expect(cols[2]).toBe('Preço/g (R$)')
+    expect(cols[3]).toBe('Valor (R$)')
+    expect(cols[4]).toBe('Pagamento')
+    expect(cols[5]).toBe('Status')
+    // novas colunas ao final
+    expect(cols[6]).toBe('Produto')
+    expect(cols[7]).toBe('Tipo')
+    expect(cols[8]).toBe('Quantidade')
+    expect(cols[9]).toBe('Casquinha')
+  })
+
+  it('produto e tipo aparecem nas colunas finais', () => {
+    const csv = buildCsvString([makeSale({ products: { name: 'Açaí', product_type: 'weight' } })])
+    expect(csv).toContain(';Açaí;por peso;1;NAO')
+  })
+
+  it('casquinha=true → SIM na coluna Casquinha', () => {
+    const csv = buildCsvString([makeSale({ has_casquinha: true })])
+    expect(csv).toContain(';SIM')
+  })
+
+  it('produto nulo → traço na coluna Produto', () => {
+    const csv = buildCsvString([makeSale({ products: null })])
+    expect(csv).toContain(';—;')
   })
 
   it('array vazio gera somente cabeçalho (1 linha)', () => {
@@ -75,7 +109,7 @@ describe('buildCsvString', () => {
 
   it('status undefined (pré-migration) → ATIVA', () => {
     const sale = makeSale()
-    delete (sale as Partial<Sale>).status
+    delete (sale as Partial<SaleWithProduct>).status
     const csv = buildCsvString([sale])
     expect(csv).toContain(';ATIVA')
   })

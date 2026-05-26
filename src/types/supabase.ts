@@ -101,27 +101,42 @@ export type Database = {
       products: {
         Row: {
           active: boolean
+          created_by: string | null
           id: string
           location_id: string | null
           name: string
           price_per_gram: number
+          product_type: string
+          sort_order: number
+          unit_price: number | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           active?: boolean
+          created_by?: string | null
           id?: string
           location_id?: string | null
           name: string
           price_per_gram: number
+          product_type?: string
+          sort_order?: number
+          unit_price?: number | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           active?: boolean
+          created_by?: string | null
           id?: string
           location_id?: string | null
           name?: string
           price_per_gram?: number
+          product_type?: string
+          sort_order?: number
+          unit_price?: number | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -142,10 +157,13 @@ export type Database = {
           change_returned: number | null
           created_at: string
           created_offline: boolean
+          has_casquinha: boolean
           id: string
           location_id: string
           payment_method: string
           price_per_gram: number
+          product_id: string | null
+          quantity: number
           shift_id: string
           status: string
           sync_reconciled: boolean
@@ -161,10 +179,13 @@ export type Database = {
           change_returned?: number | null
           created_at?: string
           created_offline?: boolean
+          has_casquinha?: boolean
           id: string
           location_id: string
           payment_method: string
           price_per_gram: number
+          product_id?: string | null
+          quantity?: number
           shift_id: string
           status?: string
           sync_reconciled?: boolean
@@ -180,10 +201,13 @@ export type Database = {
           change_returned?: number | null
           created_at?: string
           created_offline?: boolean
+          has_casquinha?: boolean
           id?: string
           location_id?: string
           payment_method?: string
           price_per_gram?: number
+          product_id?: string | null
+          quantity?: number
           shift_id?: string
           status?: string
           sync_reconciled?: boolean
@@ -198,6 +222,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales_summary"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "sales_shift_id_fkey"
@@ -354,9 +392,30 @@ export type Database = {
           },
         ]
       }
+      product_sales_summary: {
+        Row: {
+          location_id: string | null
+          product_id: string | null
+          product_name: string | null
+          product_type: string | null
+          total_amount: number | null
+          total_quantity: number | null
+          total_sales: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_cancel_sale: { Args: { p_sale_id: string }; Returns: boolean }
+      fn_is_admin_of_location: { Args: { loc_id: string }; Returns: boolean }
       get_my_location_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
     }

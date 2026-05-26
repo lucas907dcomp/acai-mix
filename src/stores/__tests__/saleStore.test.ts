@@ -6,6 +6,7 @@ beforeEach(() => {
     capturedWeightGrams: null,
     pricePerGram: null,
     amount: null,
+    hasCasquinha: false,
     paymentMethod: null,
     amountReceived: null,
     change: null,
@@ -106,5 +107,56 @@ describe('saleStore.reset', () => {
     expect(state.paymentMethod).toBeNull()
     expect(state.amountReceived).toBeNull()
     expect(state.change).toBeNull()
+  })
+
+  it('reseta hasCasquinha para false após reset (AC2)', () => {
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().toggleCasquinha()
+    expect(useSaleStore.getState().hasCasquinha).toBe(true)
+    useSaleStore.getState().reset()
+    expect(useSaleStore.getState().hasCasquinha).toBe(false)
+  })
+})
+
+describe('saleStore.toggleCasquinha', () => {
+  it('alterna hasCasquinha quando não há peso capturado', () => {
+    useSaleStore.getState().toggleCasquinha()
+    expect(useSaleStore.getState().hasCasquinha).toBe(true)
+    useSaleStore.getState().toggleCasquinha()
+    expect(useSaleStore.getState().hasCasquinha).toBe(false)
+  })
+
+  it('recalcula amount imediatamente ao ativar com peso já capturado (AC3)', () => {
+    useSaleStore.getState().captureWeight(300, 0.07) // amount = 21.00
+    expect(useSaleStore.getState().amount).toBe(21.0)
+    useSaleStore.getState().toggleCasquinha()
+    // 300 × 0.07 + 1.00 = 22.00
+    expect(useSaleStore.getState().hasCasquinha).toBe(true)
+    expect(useSaleStore.getState().amount).toBe(22.0)
+  })
+
+  it('recalcula amount ao desativar removendo o R$1,00', () => {
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().toggleCasquinha() // on → 22.00
+    useSaleStore.getState().toggleCasquinha() // off → 21.00
+    expect(useSaleStore.getState().hasCasquinha).toBe(false)
+    expect(useSaleStore.getState().amount).toBe(21.0)
+  })
+
+  it('captureWeight respeita hasCasquinha já ativo (recaptura com casquinha)', () => {
+    useSaleStore.getState().toggleCasquinha() // hasCasquinha = true, sem peso
+    useSaleStore.getState().captureWeight(300, 0.07)
+    // 300 × 0.07 + 1.00 = 22.00
+    expect(useSaleStore.getState().amount).toBe(22.0)
+  })
+
+  it('limpa amountReceived e change ao alternar casquinha (evita troco stale)', () => {
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().setPaymentMethod('cash')
+    useSaleStore.getState().setAmountReceived(25)
+    expect(useSaleStore.getState().change).toBe(4) // 25 - 21
+    useSaleStore.getState().toggleCasquinha()
+    expect(useSaleStore.getState().amountReceived).toBeNull()
+    expect(useSaleStore.getState().change).toBeNull()
   })
 })

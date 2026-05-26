@@ -6,6 +6,9 @@ export type ShiftStatus = 'open' | 'closed' | 'provisional'
 
 export type WeightSource = 'scale' | 'manual'
 
+// EPIC-10 / Story 10.2 — multi-product catalog
+export type ProductType = 'weight' | 'unit'
+
 export interface Location {
   id: string
   name: string
@@ -27,6 +30,15 @@ export interface Product {
   price_per_gram: number
   active: boolean
   updated_at: string
+  // Added in EPIC-10 / Story 10.2.
+  // Existing rows are migrated to product_type='weight' and
+  // unit_price=NULL by migration 010, so non-optional fields here
+  // are safe.
+  product_type: ProductType
+  unit_price: number | null
+  sort_order: number
+  created_by?: string | null
+  updated_by?: string | null
 }
 
 export interface Shift {
@@ -66,4 +78,21 @@ export interface Sale {
   status?: SaleStatus
   cancelled_at?: string | null
   cancelled_by?: string | null
+  // Added in EPIC-10 / Story 10.2 — all optional to preserve
+  // backward compat with legacy clients that omit them. The edge
+  // function `sync-sales` applies server-side defaults
+  // (has_casquinha=false, product_id=resolved-açaí, quantity=1).
+  has_casquinha?: boolean
+  product_id?: string | null
+  quantity?: number
+}
+
+// Extends Sale with the joined products row returned by Supabase when
+// using `.select('*, products(name, product_type)')`. The field is
+// optional/nullable because legacy rows may predate the product join.
+export interface SaleWithProduct extends Sale {
+  products?: {
+    name: string
+    product_type: ProductType
+  } | null
 }

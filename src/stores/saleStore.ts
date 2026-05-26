@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
+import { calcSaleAmount } from '@/constants/pricing'
 import type { PaymentMethod, Sale } from '@/types'
 
 export function formatCurrency(value: number): string {
@@ -16,12 +17,14 @@ interface SaleState {
   capturedWeightGrams: number | null
   pricePerGram: number | null
   amount: number | null
+  hasCasquinha: boolean
   paymentMethod: PaymentMethod | null
   amountReceived: number | null
   change: number | null
   isConfirming: boolean
   captureWeight: (grams: number, pricePerGram: number) => void
   captureAmount: (amount: number, pricePerGram: number) => void
+  toggleCasquinha: () => void
   setPaymentMethod: (method: PaymentMethod) => void
   setAmountReceived: (value: number) => void
   confirmSale: () => Promise<void>
@@ -32,21 +35,37 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   capturedWeightGrams: null,
   pricePerGram: null,
   amount: null,
+  hasCasquinha: false,
   paymentMethod: null,
   amountReceived: null,
   change: null,
   isConfirming: false,
 
   captureWeight: (grams, pricePerGram) => {
-    const pricePerKgCents = Math.round(pricePerGram * 100_000)
-    const amountCents = Math.round((grams * pricePerKgCents) / 1_000)
-    const amount = amountCents / 100
+    const { hasCasquinha } = get()
+    const amount = calcSaleAmount(grams, pricePerGram, hasCasquinha)
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 
   captureAmount: (amount, pricePerGram) => {
     const grams = pricePerGram > 0 ? Math.round(amount / pricePerGram) : 0
     set({ capturedWeightGrams: grams, pricePerGram, amount })
+  },
+
+  toggleCasquinha: () => {
+    const { hasCasquinha, capturedWeightGrams, pricePerGram } = get()
+    const next = !hasCasquinha
+    // Recompute amount in lock-step with the toggle when a weight
+    // is already captured (AC3 — real-time recalculation).
+    if (capturedWeightGrams !== null && pricePerGram !== null) {
+      const amount = calcSaleAmount(capturedWeightGrams, pricePerGram, next)
+      // Also reset cash change to avoid showing stale troco against
+      // the previous amount (the cashier would notice, but better to
+      // be explicit).
+      set({ hasCasquinha: next, amount, amountReceived: null, change: null })
+    } else {
+      set({ hasCasquinha: next })
+    }
   },
 
   setPaymentMethod: (method) => {
@@ -97,6 +116,9 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       synced_at: null,
       created_offline: false,
       created_at: new Date().toISOString(),
+      // EPIC-10 / Story 10.1 — casquinha add-on flag.
+      // The R$ 1,00 is already included in `amount` via calcSaleAmount.
+      has_casquinha: state.hasCasquinha,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -131,6 +153,7 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       capturedWeightGrams: null,
       pricePerGram: null,
       amount: null,
+      hasCasquinha: false,
       paymentMethod: null,
       amountReceived: null,
       change: null,

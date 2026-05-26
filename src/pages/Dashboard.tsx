@@ -8,6 +8,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { ShiftBreakdown } from '@/components/dashboard/ShiftBreakdown'
 import { PaymentBreakdown } from '@/components/dashboard/PaymentBreakdown'
+import { ProductSalesBreakdown } from '@/components/dashboard/ProductSalesBreakdown'
 import { useTodayAndYesterday, useDailySummary } from '@/hooks/dashboard'
 import { useSalesForExport } from '@/hooks/useSalesForExport'
 import { generateSalesCsv } from '@/utils/csv'
@@ -198,6 +199,9 @@ export default function Dashboard() {
 
       {/* Shift breakdown */}
       <ShiftBreakdown locationId={locationId} />
+
+      {/* Product breakdown */}
+      <ProductSalesBreakdown period={period} />
     </div>
   )
 }

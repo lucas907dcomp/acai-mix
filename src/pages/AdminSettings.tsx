@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useProduct } from '@/hooks/useProduct'
 import { useLocationData } from '@/hooks/useLocationData'
 import { PriceHistory } from '@/components/settings/PriceHistory'
+import { UnitProductsManager } from '@/components/settings/UnitProductsManager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -226,6 +227,8 @@ function LocationCard() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminSettings() {
+  const profile = useAuthStore((s) => s.profile)
+  const isAdmin = profile?.role === 'admin'
   const { data: product } = useProduct()
 
   return (
@@ -234,6 +237,7 @@ export default function AdminSettings() {
       <PriceCard />
       <LocationCard />
       {product && <PriceHistory productId={product.id} />}
+      {isAdmin && <UnitProductsManager />}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { startOfDay, endOfDay, subDays } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import type { Sale } from '@/types'
+import type { SaleWithProduct } from '@/types'
 import type { DatePeriod } from '@/types/dashboard'
 
 export function periodToDates(period: DatePeriod): { from: Date; to: Date } {
@@ -24,16 +24,16 @@ export function useSalesForExport(period: DatePeriod) {
   const query = useQuery({
     queryKey: ['sales-export', locationId, period],
     queryFn: async () => {
-      if (!locationId) return [] as Sale[]
+      if (!locationId) return [] as SaleWithProduct[]
       const { data, error } = await supabase
         .from('sales')
-        .select('*')
+        .select('*, products(name, product_type)')
         .eq('location_id', locationId)
         .gte('created_at', from.toISOString())
         .lte('created_at', to.toISOString())
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data ?? []) as Sale[]
+      return (data ?? []) as SaleWithProduct[]
     },
     enabled: !!locationId,
     staleTime: 30_000,

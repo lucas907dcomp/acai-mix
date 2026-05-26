@@ -1,11 +1,13 @@
 import { useSaleStore, formatCurrency } from '@/stores/saleStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { usePricePerGram } from '@/hooks/usePricePerGram'
+import { CASQUINHA_PRICE } from '@/constants/pricing'
 
 export function PriceDisplay() {
   const currentWeight = useScaleStore((s) => s.currentWeightGrams)
   const capturedWeight = useSaleStore((s) => s.capturedWeightGrams)
   const amount = useSaleStore((s) => s.amount)
+  const hasCasquinha = useSaleStore((s) => s.hasCasquinha)
   const captureWeight = useSaleStore((s) => s.captureWeight)
 
   const { data: pricePerGram, isLoading } = usePricePerGram()
@@ -39,6 +41,23 @@ export function PriceDisplay() {
           )}
           /kg
         </p>
+      )}
+
+      {/* Breakdown when casquinha is active (AC4) — only meaningful
+          after the weight is captured. */}
+      {capturedWeight !== null && hasCasquinha && amount !== null && (
+        <div className="space-y-1 text-sm border-t border-[#2d1550] pt-3">
+          <div className="flex justify-between text-[#9d7bc8]">
+            <span>Açaí {capturedWeight}g</span>
+            <span className="tabular-nums">
+              {formatCurrency(amount - CASQUINHA_PRICE)}
+            </span>
+          </div>
+          <div className="flex justify-between text-[#9d7bc8]">
+            <span>+ Casquinha</span>
+            <span className="tabular-nums">{formatCurrency(CASQUINHA_PRICE)}</span>
+          </div>
+        </div>
       )}
 
       {/* Total */}

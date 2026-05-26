@@ -32,6 +32,7 @@ function makeMockPort(chunks: Uint8Array[]) {
   return {
     open: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
+    setSignals: vi.fn().mockResolvedValue(undefined),
     readable: makeReadableStream(chunks),
     addEventListener: vi.fn(),
   }

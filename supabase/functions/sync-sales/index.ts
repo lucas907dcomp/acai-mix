@@ -24,6 +24,12 @@ interface SalePayload {
   synced_at: string | null
   created_offline: boolean
   created_at: string
+  // EPIC-10 / Story 10.2 — all optional with server-side defaults
+  // so legacy PWA clients (cached, pre-deploy) continue to sync.
+  // product_id is NULL for açaí weight sales (the default flow).
+  has_casquinha?: boolean
+  product_id?: string | null
+  quantity?: number
 }
 
 interface ShiftRecord {
@@ -119,6 +125,12 @@ Deno.serve(async (req) => {
         }
       }
 
+      // EPIC-10 defaults. product_id stays null for açaí weight sales —
+      // that is the correct, intended value, not a missing-data problem.
+      const hasCasquinha = sale.has_casquinha ?? false
+      const quantity = sale.quantity ?? 1
+      const productId = sale.product_id ?? null
+
       const { error: upsertError } = await supabase.from('sales').upsert(
         {
           id: sale.id,
@@ -135,6 +147,9 @@ Deno.serve(async (req) => {
           synced_at: now,
           created_offline: true,
           created_at: sale.created_at,
+          has_casquinha: hasCasquinha,
+          product_id: productId,
+          quantity,
         },
         { onConflict: 'id' }
       )
