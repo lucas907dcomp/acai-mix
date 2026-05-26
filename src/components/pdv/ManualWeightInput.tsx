@@ -10,35 +10,65 @@ interface ManualWeightInputProps {
 }
 
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
-  const [raw, setRaw] = useState('')
+  const [digits, setDigits] = useState('')
   const [error, setError] = useState<string | null>(null)
   const captureAmount = useSaleStore((s) => s.captureAmount)
   const { data: pricePerGram } = usePricePerGram()
 
-  function handleConfirm() {
-    const amount = parseFloat(raw.replace(',', '.'))
+  // Centavo-based: "2750" → 2750 centavos → R$ 27,50
+  const centavos = parseInt(digits || '0', 10)
+  const reais = centavos / 100
+  const displayValue = reais.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 
-    if (isNaN(amount) || amount <= 0) {
-      setError('Digite um valor válido maior que zero.')
-      return
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const ie = e.nativeEvent as InputEvent
+    const inputType = ie.inputType ?? ''
+    const data = ie.data ?? ''
+
+    if (inputType === 'deleteContentBackward' || inputType === 'deleteWordBackward') {
+      setDigits((d) => d.slice(0, -1))
+    } else if (/^\d$/.test(data)) {
+      setDigits((d) => (d.length >= 7 ? d : d + data))
     }
-    if (amount > 10_000) {
-      setError('Valor máximo: R$ 10.000,00.')
-      return
-    }
-
-    if (!pricePerGram) return
-
-    const grams = Math.round(amount / pricePerGram)
-    provider.setWeight(grams)
-    captureAmount(amount, pricePerGram)
-
-    setRaw('')
     setError(null)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') handleConfirm()
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 7)
+    if (pasted) {
+      setDigits(pasted)
+      setError(null)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleConfirm()
+    }
+  }
+
+  function handleConfirm() {
+    if (reais <= 0) {
+      setError('Digite um valor válido maior que zero.')
+      return
+    }
+    if (reais > 10_000) {
+      setError('Valor máximo: R$ 10.000,00.')
+      return
+    }
+    if (!pricePerGram) return
+
+    const grams = Math.round(reais / pricePerGram)
+    provider.setWeight(grams)
+    captureAmount(reais, pricePerGram)
+
+    setDigits('')
+    setError(null)
   }
 
   return (
@@ -52,16 +82,11 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
         </span>
         <Input
           id="manual-value"
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min="0.01"
-          placeholder="0,00"
-          value={raw}
-          onChange={(e) => {
-            setRaw(e.target.value)
-            setError(null)
-          }}
+          type="text"
+          inputMode="numeric"
+          value={displayValue}
+          onChange={handleChange}
+          onPaste={handlePaste}
           onKeyDown={handleKeyDown}
           className="pl-12 text-4xl h-16 text-center font-bold bg-[#0f0720] border-[#2d1550] text-white placeholder:text-[#4a3570] focus-visible:ring-[#4c1e8c]"
           aria-label="Valor manual da venda em reais"
@@ -76,7 +101,7 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
       )}
       <Button
         onClick={handleConfirm}
-        disabled={!raw || !pricePerGram}
+        disabled={centavos === 0 || !pricePerGram}
         className="h-14 text-lg bg-[#4c1e8c] hover:bg-[#5d2aaa] disabled:opacity-40 text-white"
       >
         Confirmar Valor

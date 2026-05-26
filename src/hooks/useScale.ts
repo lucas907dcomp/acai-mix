@@ -9,17 +9,17 @@ export function useScale() {
 
   useEffect(() => {
     const useMock = import.meta.env.VITE_SCALE_MOCK === 'true'
-    const provider = useMock ? new MockScaleProvider() : new SerialScaleProvider()
+    // Default to manual mode so the cashier never needs to click
+    // "Digitar manualmente" on every page visit. Serial scale is
+    // opt-in via the "Conectar Balança" button in ScaleConnectionStatus.
+    const provider = useMock ? new MockScaleProvider() : new ManualInputProvider()
 
     setProvider(provider)
 
     const unsubWeight = provider.onWeight(updateWeight)
     const unsubConnection = provider.onConnectionChange(updateConnection)
 
-    // Mock connects automatically; serial waits for user gesture via "Conectar Balança" button
-    if (useMock) {
-      provider.connect().catch(() => {})
-    }
+    provider.connect().catch(() => {})
 
     return () => {
       unsubWeight()
