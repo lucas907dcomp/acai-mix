@@ -86,13 +86,19 @@ export function useUpdateProduct() {
     mutationFn: async ({ id, ...patch }) => {
       const { data: { user } } = await supabase.auth.getUser()
 
-      const updatePayload: Record<string, unknown> = {
+      const updatePayload: {
+        updated_by: string | null
+        name?: string
+        unit_price?: number
+        sort_order?: number
+        active?: boolean
+      } = {
         updated_by: user?.id ?? null,
+        ...(patch.name !== undefined && { name: patch.name }),
+        ...(patch.unit_price !== undefined && { unit_price: patch.unit_price }),
+        ...(patch.sort_order !== undefined && { sort_order: patch.sort_order }),
+        ...(patch.active !== undefined && { active: patch.active }),
       }
-      if (patch.name !== undefined) updatePayload.name = patch.name
-      if (patch.unit_price !== undefined) updatePayload.unit_price = patch.unit_price
-      if (patch.sort_order !== undefined) updatePayload.sort_order = patch.sort_order
-      if (patch.active !== undefined) updatePayload.active = patch.active
 
       const { data, error } = await supabase
         .from('products')
