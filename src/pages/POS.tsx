@@ -3,6 +3,7 @@ import { useScale } from '@/hooks/useScale'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSaleStore } from '@/stores/saleStore'
+import { useScaleStore } from '@/stores/scaleStore'
 import { ShiftStatusBar } from '@/components/shifts/ShiftStatusBar'
 import { ShiftOpenScreen } from '@/components/pdv/ShiftOpenScreen'
 import { ScaleConnectionStatus } from '@/components/pdv/ScaleConnectionStatus'
@@ -25,6 +26,7 @@ export default function POS() {
   const startPolling = useShiftStore((s) => s.startPolling)
   const stopPolling = useShiftStore((s) => s.stopPolling)
   const paymentMethod = useSaleStore((s) => s.paymentMethod)
+  const isManualMode = useScaleStore((s) => s.providerType === 'manual')
 
   useEffect(() => {
     if (profile?.location_id && !activeShift) {
@@ -60,7 +62,7 @@ export default function POS() {
         <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 overflow-y-auto">
           <ScaleConnectionStatus />
           <WeightDisplay />
-          <PriceDisplay />
+          {!isManualMode && <PriceDisplay />}
           <CasquinhaToggle />
           <PaymentMethodSelector />
           {paymentMethod === 'cash' && (

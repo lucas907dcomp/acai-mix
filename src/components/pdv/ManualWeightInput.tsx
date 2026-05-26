@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useSaleStore } from '@/stores/saleStore'
+import { useSaleStore, formatCurrency } from '@/stores/saleStore'
 import { usePricePerGram } from '@/hooks/usePricePerGram'
+import { CASQUINHA_PRICE } from '@/constants/pricing'
 import type { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 
 interface ManualWeightInputProps {
@@ -12,9 +13,68 @@ interface ManualWeightInputProps {
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
   const [digits, setDigits] = useState('')
   const [error, setError] = useState<string | null>(null)
+
   const captureAmount = useSaleStore((s) => s.captureAmount)
+  const capturedWeight = useSaleStore((s) => s.capturedWeightGrams)
+  const capturedAmount = useSaleStore((s) => s.amount)
+  const hasCasquinha = useSaleStore((s) => s.hasCasquinha)
+  const reset = useSaleStore((s) => s.reset)
+
   const { data: pricePerGram } = usePricePerGram()
 
+  // ── Confirmed state ─────────────────────────────────────────────────────────
+  // After the user confirms a value, show the summary card instead of the input.
+  if (capturedAmount !== null) {
+    const pricePerKg = pricePerGram
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+          pricePerGram * 1000
+        )
+      : null
+
+    return (
+      <div className="rounded-xl bg-[#1a0b2e] border border-[#2d1550] p-4 space-y-3">
+        {capturedWeight !== null && pricePerKg && (
+          <p className="text-sm text-[#9d7bc8]">
+            {capturedWeight}g × {pricePerKg}/kg
+          </p>
+        )}
+
+        {capturedWeight !== null && hasCasquinha && (
+          <div className="space-y-1 text-sm border-t border-[#2d1550] pt-3">
+            <div className="flex justify-between text-[#9d7bc8]">
+              <span>Açaí {capturedWeight}g</span>
+              <span className="tabular-nums">
+                {formatCurrency(capturedAmount - CASQUINHA_PRICE)}
+              </span>
+            </div>
+            <div className="flex justify-between text-[#9d7bc8]">
+              <span>+ Casquinha</span>
+              <span className="tabular-nums">{formatCurrency(CASQUINHA_PRICE)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="text-4xl font-bold tabular-nums text-white">
+          {formatCurrency(capturedAmount)}
+        </div>
+
+        <p className="text-xs text-[#10b981] font-medium">Valor confirmado ✓</p>
+
+        <button
+          onClick={() => {
+            reset()
+            setDigits('')
+            setError(null)
+          }}
+          className="w-full py-1.5 rounded-lg border border-[#2d1550] text-[#9d7bc8] hover:text-white text-sm transition-colors"
+        >
+          Alterar valor
+        </button>
+      </div>
+    )
+  }
+
+  // ── Entry state ──────────────────────────────────────────────────────────────
   // Centavo-based: "2750" → 2750 centavos → R$ 27,50
   const centavos = parseInt(digits || '0', 10)
   const reais = centavos / 100
