@@ -26,7 +26,7 @@ interface SaleState {
   captureAmount: (amount: number, pricePerGram: number) => void
   toggleCasquinha: () => void
   setPaymentMethod: (method: PaymentMethod) => void
-  setAmountReceived: (value: number) => void
+  setAmountReceived: (value: number | null) => void
   confirmSale: () => Promise<void>
   reset: () => void
 }
@@ -76,6 +76,10 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   },
 
   setAmountReceived: (value) => {
+    if (value === null) {
+      set({ amountReceived: null, change: null })
+      return
+    }
     const { amount } = get()
     const change =
       amount !== null
