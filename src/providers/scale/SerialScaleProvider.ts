@@ -42,15 +42,12 @@ export class SerialScaleProvider implements IScaleProvider {
       await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
-      console.log('[Scale] port opened at', BAUD_RATE, 'baud — waiting for IMPRIME button')
-    } catch (err) {
+    } catch {
       // Port may still be locked — wait and retry once
-      console.log('[Scale] open failed, retrying in 1s...', err)
       await new Promise((resolve) => setTimeout(resolve, 1000))
       await this.port.open({ baudRate: BAUD_RATE, dataBits: 8, stopBits: 1, parity: 'none' })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (this.port as any).setSignals({ dataTerminalReady: true, requestToSend: false })
-      console.log('[Scale] port opened on retry')
     }
   }
 
@@ -78,11 +75,7 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private startReadLoop(): void {
-    if (!this.port?.readable) {
-      console.log('[Scale] ERROR: port.readable is null')
-      return
-    }
-    console.log('[Scale] listening — press IMPRIME on scale to send weight')
+    if (!this.port?.readable) return
     this.reader = this.port.readable.getReader()
     this.readLoopActive = true
     this.readLoop()
@@ -96,19 +89,12 @@ export class SerialScaleProvider implements IScaleProvider {
         const { value, done } = await this.reader.read()
         if (done) break
 
-        // DEBUG — remove after protocol confirmed
-        const hex = Array.from(value).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
-        const str = String.fromCharCode(...Array.from(value))
-        console.log('[Scale] raw hex:', hex)
-        console.log('[Scale] raw str:', JSON.stringify(str))
-
         for (const byte of value) {
           buffer.push(byte)
           if (buffer.length > PACKET_LENGTH) buffer.shift()
           if (buffer.length === PACKET_LENGTH) {
             const weight = this.parsePacket(buffer)
             if (weight !== null) {
-              console.log('[Scale] parsed weight:', weight, 'g')
               this.weightCallbacks.forEach((cb) => cb(weight))
             }
           }
