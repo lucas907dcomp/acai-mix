@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import acaiLogo from '@/assets/acai-mix-logo.jpg'
 import type { Shift, Sale } from '@/types'
 
 const fmt = (v: number) =>
@@ -10,7 +11,12 @@ const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  new Date(iso).toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
 
 function elapsed(openedAt: string, closedAt: string | null): string {
   const end = closedAt ? new Date(closedAt) : new Date()
@@ -20,26 +26,11 @@ function elapsed(openedAt: string, closedAt: string | null): string {
   return h > 0 ? `${h}h ${m}min` : `${m}min`
 }
 
-const PAYMENT_LABELS: Record<string, string> = {
-  pix: 'PIX',
-  credit: 'Crédito',
-  debit: 'Débito',
-  cash: 'Dinheiro',
-}
-
-const PAYMENT_COLORS: Record<string, string> = {
-  pix: '#10b981',
-  credit: '#3b82f6',
-  debit: '#6366f1',
-  cash: '#f59e0b',
-}
-
-interface PaymentRow {
-  method: string
-  label: string
-  total: number
-  count: number
-  color: string
+const PAYMENT_META: Record<string, { label: string; color: string }> = {
+  pix:     { label: 'PIX',      color: '#059669' },
+  credit:  { label: 'Crédito',  color: '#2563eb' },
+  debit:   { label: 'Débito',   color: '#7c3aed' },
+  cash:    { label: 'Dinheiro', color: '#d97706' },
 }
 
 export default function ShiftReport() {
@@ -53,7 +44,6 @@ export default function ShiftReport() {
 
   useEffect(() => {
     if (!shiftId) return
-
     async function load() {
       const [{ data: shiftData, error: shiftErr }, { data: salesData, error: salesErr }] =
         await Promise.all([
@@ -62,25 +52,21 @@ export default function ShiftReport() {
             .from('sales')
             .select('*')
             .eq('shift_id', shiftId!)
-            .is('status', null)
+            .neq('status', 'CANCELLED')
             .order('created_at'),
         ])
-
       if (shiftErr || salesErr) {
         setFetchError(shiftErr?.message ?? salesErr?.message ?? 'Erro ao carregar dados.')
         setLoading(false)
         return
       }
-
       setShift(shiftData as Shift)
       setSales((salesData as Sale[]) ?? [])
       setLoading(false)
     }
-
     load()
   }, [shiftId])
 
-  // Auto-print once data is ready
   useEffect(() => {
     if (!loading && shift && !fetchError) {
       const t = setTimeout(() => window.print(), 400)
@@ -88,13 +74,11 @@ export default function ShiftReport() {
     }
   }, [loading, shift, fetchError])
 
-  const errorMsg = !shiftId
-    ? 'ID do turno não informado.'
-    : fetchError
+  const errorMsg = !shiftId ? 'ID do turno não informado.' : fetchError
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">
+      <div className="flex items-center justify-center h-screen bg-white text-gray-400 text-sm">
         Carregando relatório...
       </div>
     )
@@ -102,223 +86,290 @@ export default function ShiftReport() {
 
   if (errorMsg || !shift) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 text-red-500">
+      <div className="flex items-center justify-center h-screen bg-white text-red-500 text-sm">
         {errorMsg ?? 'Turno não encontrado.'}
       </div>
     )
   }
 
   const activeSales = sales.filter((s) => s.status !== 'CANCELLED')
+  const grandTotal = activeSales.reduce((sum, s) => sum + s.amount, 0)
 
-  const paymentRows: PaymentRow[] = ['pix', 'credit', 'debit', 'cash'].map((method) => {
-    const methodSales = activeSales.filter((s) => s.payment_method === method)
+  const paymentRows = ['pix', 'credit', 'debit', 'cash'].map((method) => {
+    const ms = activeSales.filter((s) => s.payment_method === method)
+    const total = ms.reduce((sum, s) => sum + s.amount, 0)
     return {
       method,
-      label: PAYMENT_LABELS[method],
-      total: methodSales.reduce((sum, s) => sum + s.amount, 0),
-      count: methodSales.length,
-      color: PAYMENT_COLORS[method],
+      ...PAYMENT_META[method],
+      total,
+      count: ms.length,
+      pct: grandTotal > 0 ? (total / grandTotal) * 100 : 0,
     }
   })
-
-  const grandTotal = activeSales.reduce((sum, s) => sum + s.amount, 0)
 
   return (
     <>
       <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          background: #f1f5f9;
+          font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+          color: #111827;
+          font-size: 13px;
+          line-height: 1.5;
+        }
         @media print {
           @page { margin: 12mm 14mm; size: A4; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body {
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
           .no-print { display: none !important; }
+          .page { box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; }
         }
-        body { background: #f3f4f6; margin: 0; font-family: 'Inter', system-ui, sans-serif; }
       `}</style>
 
-      {/* Print button — hidden when printing */}
-      <div className="no-print flex justify-center pt-6 pb-2 gap-3">
+      {/* Toolbar — hidden on print */}
+      <div className="no-print flex items-center justify-center gap-3 py-5">
         <button
           onClick={() => window.print()}
-          className="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-lg text-sm font-medium"
+          style={{ background: '#7b2d8b', color: 'white' }}
+          className="px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
         >
           Imprimir / Salvar PDF
         </button>
         <button
           onClick={() => window.close()}
-          className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium"
+          className="px-5 py-2 rounded-lg text-sm font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
         >
           Fechar
         </button>
       </div>
 
-      {/* Report card */}
-      <div className="max-w-2xl mx-auto my-4 bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Page */}
+      <div
+        className="page"
+        style={{
+          maxWidth: '720px',
+          margin: '0 auto 40px',
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+        }}
+      >
 
-        {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #3b0764 0%, #4c1e8c 60%, #6d28d9 100%)' }}
-          className="px-8 py-6 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-3xl">🍇</span>
-                <span className="text-2xl font-bold tracking-tight">Açaí Mix</span>
+        {/* ── HEADER ─────────────────────────────────────────── */}
+        <div style={{ borderBottom: '3px solid #f5c800', padding: '24px 32px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+            {/* Logo + brand */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <img
+                src={acaiLogo}
+                alt="Açaí Mix"
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  objectPosition: 'center',
+                  flexShrink: 0,
+                }}
+              />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.3px', color: '#7b2d8b' }}>
+                  AÇAÍ<span style={{ color: '#00b5a0' }}>MIX</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, letterSpacing: '0.5px' }}>
+                  SELF SERVICE
+                </div>
               </div>
-              <p className="text-purple-200 text-sm font-medium">Relatório de Turno</p>
             </div>
-            <div className="text-right">
-              <p className="text-white font-semibold text-lg">
+
+            {/* Document title */}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827', letterSpacing: '-0.2px' }}>
+                Relatório de Turno
+              </div>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
                 {fmtDate(shift.opened_at)}
-              </p>
-              <p className="text-purple-200 text-sm">
-                Gerado em {fmtTime(new Date().toISOString())}
-              </p>
+              </div>
+              <div style={{
+                display: 'inline-block',
+                marginTop: '6px',
+                padding: '2px 10px',
+                borderRadius: '99px',
+                background: '#f5c800',
+                color: '#78350f',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '0.3px',
+              }}>
+                TURNO {shift.shift_number}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Shift info strip */}
-        <div className="bg-purple-50 border-b border-purple-100 px-8 py-4">
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div>
-              <span className="text-purple-400 font-medium uppercase text-xs tracking-wider">Turno</span>
-              <p className="text-purple-900 font-bold text-xl mt-0.5">
-                Turno {shift.shift_number}
-              </p>
+        {/* ── METRICS ROW ────────────────────────────────────── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          borderBottom: '1px solid #e5e7eb',
+        }}>
+          {[
+            { label: 'Total do Turno', value: fmt(grandTotal), accent: true },
+            { label: 'Transações',     value: String(activeSales.length) },
+            { label: 'Período',        value: `${fmtTime(shift.opened_at)} – ${shift.closed_at ? fmtTime(shift.closed_at) : 'aberto'}` },
+            { label: 'Duração',        value: elapsed(shift.opened_at, shift.closed_at) },
+          ].map((m, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '16px 20px',
+                borderRight: i < 3 ? '1px solid #e5e7eb' : undefined,
+              }}
+            >
+              <div style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                {m.label}
+              </div>
+              <div style={{
+                fontSize: m.accent ? '18px' : '14px',
+                fontWeight: 700,
+                color: m.accent ? '#059669' : '#111827',
+                letterSpacing: m.accent ? '-0.5px' : '-0.2px',
+              }}>
+                {m.value}
+              </div>
             </div>
-            <div>
-              <span className="text-purple-400 font-medium uppercase text-xs tracking-wider">Abertura</span>
-              <p className="text-gray-800 font-semibold text-base mt-0.5">{fmtTime(shift.opened_at)}</p>
-            </div>
-            <div>
-              <span className="text-purple-400 font-medium uppercase text-xs tracking-wider">Fechamento</span>
-              <p className="text-gray-800 font-semibold text-base mt-0.5">
-                {shift.closed_at ? fmtTime(shift.closed_at) : '—'}
-              </p>
-            </div>
-            <div>
-              <span className="text-purple-400 font-medium uppercase text-xs tracking-wider">Duração</span>
-              <p className="text-gray-800 font-semibold text-base mt-0.5">
-                {elapsed(shift.opened_at, shift.closed_at)}
-              </p>
-            </div>
-            <div>
-              <span className="text-purple-400 font-medium uppercase text-xs tracking-wider">Vendas</span>
-              <p className="text-gray-800 font-semibold text-base mt-0.5">
-                {activeSales.length}
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Financial summary */}
-        <div className="px-8 py-6 border-b border-gray-100">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-            Resumo Financeiro
-          </h2>
-
-          {/* Total highlight */}
-          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4 mb-4">
-            <span className="text-emerald-700 font-semibold text-base">Total do Turno</span>
-            <span className="text-emerald-700 font-bold text-2xl">{fmt(grandTotal)}</span>
+        {/* ── PAYMENT BREAKDOWN ──────────────────────────────── */}
+        <div style={{ padding: '20px 32px', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{
+            fontSize: '10px', fontWeight: 700, color: '#9ca3af',
+            letterSpacing: '0.8px', textTransform: 'uppercase',
+            borderLeft: '3px solid #f5c800', paddingLeft: '8px', marginBottom: '14px',
+          }}>
+            Formas de Pagamento
           </div>
 
-          {/* Payment breakdown */}
-          <div className="space-y-3">
-            {paymentRows.map((row) => {
-              const pct = grandTotal > 0 ? (row.total / grandTotal) * 100 : 0
-              return (
-                <div key={row.method}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ background: row.color }}
-                      />
-                      <span className="text-gray-700 text-sm font-medium">{row.label}</span>
-                      <span className="text-gray-400 text-xs">({row.count} venda{row.count !== 1 ? 's' : ''})</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-400 text-xs w-8 text-right">
-                        {pct.toFixed(0)}%
-                      </span>
-                      <span className="text-gray-800 font-semibold text-sm w-24 text-right">
-                        {fmt(row.total)}
-                      </span>
-                    </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {paymentRows.map((row) => (
+              <div key={row.method}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: row.color, flexShrink: 0, display: 'inline-block',
+                    }} />
+                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '12px' }}>{row.label}</span>
+                    <span style={{ color: '#9ca3af', fontSize: '11px' }}>
+                      {row.count} {row.count === 1 ? 'venda' : 'vendas'}
+                    </span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: row.color }}
-                    />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '11px', minWidth: '32px', textAlign: 'right' }}>
+                      {row.pct.toFixed(1)}%
+                    </span>
+                    <span style={{ fontWeight: 700, color: '#111827', fontSize: '13px', minWidth: '80px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(row.total)}
+                    </span>
                   </div>
                 </div>
-              )
-            })}
+                <div style={{ height: '4px', background: '#f3f4f6', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${row.pct}%`, background: row.color, borderRadius: '2px' }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Sales list */}
-        <div className="px-8 py-6">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-            Vendas Detalhadas
-          </h2>
+        {/* ── SALES TABLE ────────────────────────────────────── */}
+        <div style={{ padding: '20px 32px 28px' }}>
+          <div style={{
+            fontSize: '10px', fontWeight: 700, color: '#9ca3af',
+            letterSpacing: '0.8px', textTransform: 'uppercase',
+            borderLeft: '3px solid #f5c800', paddingLeft: '8px', marginBottom: '14px',
+          }}>
+            Detalhamento de Vendas
+          </div>
 
           {activeSales.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-6">Nenhuma venda registrada.</p>
+            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '24px 0', fontSize: '13px' }}>
+              Nenhuma venda registrada neste turno.
+            </p>
           ) : (
-            <table className="w-full text-sm">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left text-xs text-gray-400 font-medium pb-2 pr-3">Horário</th>
-                  <th className="text-left text-xs text-gray-400 font-medium pb-2 pr-3">Produto</th>
-                  <th className="text-right text-xs text-gray-400 font-medium pb-2 pr-3">Peso/Qtd</th>
-                  <th className="text-right text-xs text-gray-400 font-medium pb-2 pr-3">Valor</th>
-                  <th className="text-left text-xs text-gray-400 font-medium pb-2">Pagamento</th>
+                <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                  {['#', 'Horário', 'Descrição', 'Peso / Qtd', 'Valor', 'Pagamento'].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '6px 8px',
+                      textAlign: i >= 3 ? 'right' : 'left',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      color: '#9ca3af',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {activeSales.map((sale, i) => {
-                  const isWeight = sale.weight_grams > 0
-                  const isCombined = sale.is_combined
-                  const color = PAYMENT_COLORS[sale.payment_method]
+                  const meta = PAYMENT_META[sale.payment_method]
+                  const isWeight = sale.weight_grams > 0 && !sale.is_combined
+                  const desc = sale.is_combined
+                    ? `Pedido conjunto — ${sale.combined_order_name ?? 'Conjunto'}`
+                    : isWeight
+                      ? `Açaí self service${sale.has_casquinha ? ' + casquinha' : ''}`
+                      : 'Produto avulso'
+                  const detail = isWeight
+                    ? `${sale.weight_grams}g`
+                    : sale.quantity
+                      ? `${sale.quantity}×`
+                      : '—'
+
                   return (
                     <tr
                       key={sale.id}
-                      className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      style={{ background: i % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #f3f4f6' }}
                     >
-                      <td className="py-2 pr-3 text-gray-500 tabular-nums">
+                      <td style={{ padding: '7px 8px', color: '#9ca3af', fontSize: '11px', fontVariantNumeric: 'tabular-nums' }}>
+                        {i + 1}
+                      </td>
+                      <td style={{ padding: '7px 8px', color: '#6b7280', fontSize: '12px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {fmtTime(sale.created_at)}
                       </td>
-                      <td className="py-2 pr-3 text-gray-800">
-                        {isCombined ? (
-                          <span>
-                            <span className="text-amber-600 font-medium">Pedido: </span>
-                            {sale.combined_order_name ?? 'Conjunto'}
-                          </span>
-                        ) : isWeight ? (
-                          <span>
-                            Açaí{sale.has_casquinha ? ' + Casquinha' : ''}
-                          </span>
-                        ) : (
-                          <span>Produto avulso</span>
-                        )}
+                      <td style={{ padding: '7px 8px', color: '#111827', fontSize: '12px', maxWidth: '200px' }}>
+                        {desc}
                       </td>
-                      <td className="py-2 pr-3 text-right text-gray-500 tabular-nums">
-                        {isWeight && !isCombined
-                          ? `${sale.weight_grams}g`
-                          : sale.quantity
-                            ? `${sale.quantity}x`
-                            : '—'}
+                      <td style={{ padding: '7px 8px', color: '#6b7280', fontSize: '12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {detail}
                       </td>
-                      <td className="py-2 pr-3 text-right text-gray-800 font-medium tabular-nums">
+                      <td style={{ padding: '7px 8px', fontWeight: 600, color: '#111827', fontSize: '12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {fmt(sale.amount)}
                       </td>
-                      <td className="py-2">
-                        <span
-                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                          style={{ background: color + '18', color }}
-                        >
-                          {PAYMENT_LABELS[sale.payment_method]}
+                      <td style={{ padding: '7px 8px', textAlign: 'right' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.3px',
+                          background: meta.color + '18',
+                          color: meta.color,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {meta.label}
                         </span>
                       </td>
                     </tr>
@@ -326,11 +377,12 @@ export default function ShiftReport() {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-200">
-                  <td colSpan={3} className="pt-3 text-gray-500 text-xs">
-                    {activeSales.length} venda{activeSales.length !== 1 ? 's' : ''}
+                <tr style={{ borderTop: '2px solid #e5e7eb' }}>
+                  <td colSpan={3} style={{ padding: '10px 8px 0', color: '#6b7280', fontSize: '11px' }}>
+                    {activeSales.length} {activeSales.length === 1 ? 'transação' : 'transações'}
                   </td>
-                  <td className="pt-3 text-right font-bold text-gray-900 tabular-nums text-base">
+                  <td />
+                  <td style={{ padding: '10px 8px 0', textAlign: 'right', fontWeight: 800, fontSize: '15px', color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(grandTotal)}
                   </td>
                   <td />
@@ -340,15 +392,24 @@ export default function ShiftReport() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-4 border-t border-gray-100">
-          <p className="text-center text-gray-400 text-xs">
-            Açaí Mix · Turno {shift.shift_number} · {fmtDate(shift.opened_at)}
-          </p>
+        {/* ── FOOTER ─────────────────────────────────────────── */}
+        <div style={{
+          borderTop: '1px solid #e5e7eb',
+          padding: '10px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#f9fafb',
+        }}>
+          <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+            Açaí Mix Self Service · Turno {shift.shift_number} · {fmtDate(shift.opened_at)}
+          </span>
+          <span style={{ fontSize: '10px', color: '#d1d5db' }}>
+            Gerado em {fmtTime(new Date().toISOString())}
+          </span>
         </div>
-      </div>
 
-      <div className="no-print pb-8" />
+      </div>
     </>
   )
 }
