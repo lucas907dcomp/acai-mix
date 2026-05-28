@@ -3,11 +3,11 @@ import { useSaleStore } from '@/stores/saleStore'
 import type { PaymentMethod } from '@/types'
 import { cn } from '@/lib/utils'
 
-const METHODS: { method: PaymentMethod; label: string; Icon: React.ElementType }[] = [
-  { method: 'pix', label: 'PIX', Icon: QrCode },
-  { method: 'credit', label: 'Crédito', Icon: CreditCard },
-  { method: 'debit', label: 'Débito', Icon: Landmark },
-  { method: 'cash', label: 'Dinheiro', Icon: Banknote },
+const METHODS: { method: PaymentMethod; label: string; Icon: React.ElementType; key: string }[] = [
+  { method: 'pix', label: 'PIX', Icon: QrCode, key: '1' },
+  { method: 'credit', label: 'Crédito', Icon: CreditCard, key: '2' },
+  { method: 'debit', label: 'Débito', Icon: Landmark, key: '3' },
+  { method: 'cash', label: 'Dinheiro', Icon: Banknote, key: '4' },
 ]
 
 export function PaymentMethodSelector() {
@@ -25,7 +25,7 @@ export function PaymentMethodSelector() {
         role="group"
         aria-label="Selecionar forma de pagamento"
       >
-        {METHODS.map(({ method, label, Icon }) => {
+        {METHODS.map(({ method, label, Icon, key }) => {
           const selected = paymentMethod === method
           return (
             <button
@@ -42,7 +42,15 @@ export function PaymentMethodSelector() {
               )}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
+              <span className="flex-1 text-left">{label}</span>
+              <kbd className={cn(
+                'text-[10px] px-1 py-0.5 rounded border font-mono leading-none',
+                selected
+                  ? 'border-[#10b981]/40 text-[#10b981]/70'
+                  : 'border-[#2d1550] text-[#4a3570]'
+              )}>
+                {key}
+              </kbd>
             </button>
           )
         })}

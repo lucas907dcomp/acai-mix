@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useScale } from '@/hooks/useScale'
+import { usePdvKeyboard } from '@/hooks/usePdvKeyboard'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSaleStore } from '@/stores/saleStore'
@@ -19,6 +20,7 @@ import { CombinedOrderBar } from '@/components/pdv/CombinedOrderBar'
 
 export default function POS() {
   useScale()
+  usePdvKeyboard()
   const profile = useAuthStore((s) => s.profile)
   const activeShift = useShiftStore((s) => s.activeShift)
   const isShiftLoading = useShiftStore((s) => s.isLoading)

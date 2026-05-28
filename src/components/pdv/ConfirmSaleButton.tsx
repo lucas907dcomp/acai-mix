@@ -48,7 +48,16 @@ export function ConfirmSaleButton() {
         )}
         aria-label={`Adicionar peso ao pedido ${activeOrder.name}`}
       >
-        {hasWeight ? `Adicionar a "${activeOrder.name}"` : `Aguardando peso para "${activeOrder.name}"...`}
+        {hasWeight ? (
+        <>
+          {`Adicionar a "${activeOrder.name}"`}
+          <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-white/20 font-mono leading-none opacity-60">
+            ↵
+          </kbd>
+        </>
+      ) : (
+        `Aguardando peso para "${activeOrder.name}"...`
+      )}
       </button>
     )
   }
@@ -72,7 +81,12 @@ export function ConfirmSaleButton() {
           Confirmando...
         </>
       ) : (
-        'Confirmar Venda'
+        <>
+          Confirmar Venda
+          <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-white/20 font-mono leading-none opacity-60">
+            ↵
+          </kbd>
+        </>
       )}
     </button>
   )
