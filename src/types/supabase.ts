@@ -155,10 +155,13 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           change_returned: number | null
+          combined_items: Json | null
+          combined_order_name: string | null
           created_at: string
           created_offline: boolean
           has_casquinha: boolean
           id: string
+          is_combined: boolean
           location_id: string
           payment_method: string
           price_per_gram: number
@@ -177,10 +180,13 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           change_returned?: number | null
+          combined_items?: Json | null
+          combined_order_name?: string | null
           created_at?: string
           created_offline?: boolean
           has_casquinha?: boolean
           id: string
+          is_combined?: boolean
           location_id: string
           payment_method: string
           price_per_gram: number
@@ -199,10 +205,13 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           change_returned?: number | null
+          combined_items?: Json | null
+          combined_order_name?: string | null
           created_at?: string
           created_offline?: boolean
           has_casquinha?: boolean
           id?: string
+          is_combined?: boolean
           location_id?: string
           payment_method?: string
           price_per_gram?: number
