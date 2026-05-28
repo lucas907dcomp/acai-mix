@@ -85,7 +85,29 @@ export interface Sale {
   has_casquinha?: boolean
   product_id?: string | null
   quantity?: number
+  // Pedidos Conjuntos — all optional, only present on combined sales
+  is_combined?: boolean
+  combined_order_name?: string | null
+  combined_items?: CombinedItemRecord[] | null
 }
+
+export type CombinedItemRecord =
+  | {
+      type: 'weight'
+      weight_grams: number
+      price_per_gram: number
+      has_casquinha: boolean
+      product_id: string | null
+      amount: number
+    }
+  | {
+      type: 'unit'
+      product_id: string
+      product_name: string
+      quantity: number
+      unit_price: number
+      amount: number
+    }
 
 // Extends Sale with the joined products row returned by Supabase when
 // using `.select('*, products(name, product_type)')`. The field is

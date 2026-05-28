@@ -15,6 +15,7 @@ import { ConfirmSaleButton } from '@/components/pdv/ConfirmSaleButton'
 import { UnitProductsGrid } from '@/components/pdv/UnitProductsGrid'
 import { ShiftSalesTable } from '@/components/pdv/ShiftSalesTable'
 import { ManualModeDialog } from '@/components/pdv/ManualModeDialog'
+import { CombinedOrderBar } from '@/components/pdv/CombinedOrderBar'
 
 export default function POS() {
   useScale()
@@ -85,6 +86,7 @@ export default function POS() {
           </div>
 
           <ConfirmSaleButton />
+          <CombinedOrderBar />
 
           {/* Unit products — secondary, below the fold is OK */}
           <UnitProductsGrid />

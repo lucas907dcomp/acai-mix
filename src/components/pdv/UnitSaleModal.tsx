@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Minus, Plus, QrCode, CreditCard, Landmark, Banknote } from 'lucide-react'
+import { Minus, Plus, QrCode, CreditCard, Landmark, Banknote, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { formatCurrency } from '@/stores/saleStore'
+import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { getQuickValues } from '@/lib/quickValues'
 import { cn } from '@/lib/utils'
 import type { PaymentMethod, Product, Sale } from '@/types'
@@ -39,6 +40,11 @@ export function UnitSaleModal({ product, open, onClose }: Props) {
   const profile = useAuthStore((s) => s.profile)
   const activeShift = useShiftStore((s) => s.activeShift)
 
+  const activeOrderId = useCombinedOrderStore((s) => s.activeOrderId)
+  const orders = useCombinedOrderStore((s) => s.orders)
+  const addUnitItem = useCombinedOrderStore((s) => s.addUnitItem)
+  const activeOrder = activeOrderId ? orders.find((o) => o.id === activeOrderId) : null
+
   const unitPrice = product.unit_price ?? 0
   const total = Math.round(unitPrice * qty * 100) / 100
   const change =
@@ -56,6 +62,20 @@ export function UnitSaleModal({ product, open, onClose }: Props) {
     setPaymentMethod(null)
     setAmountReceived(null)
     onClose()
+  }
+
+  function handleAddToOrder() {
+    if (!activeOrderId) return
+    addUnitItem({
+      type: 'unit',
+      product_id: product.id,
+      product_name: product.name,
+      quantity: qty,
+      unit_price: unitPrice,
+      amount: total,
+    })
+    toast.success(`${product.name} adicionado ao pedido "${activeOrder?.name}"`)
+    handleClose()
   }
 
   async function handleConfirm() {
@@ -150,96 +170,124 @@ export function UnitSaleModal({ product, open, onClose }: Props) {
           <span className="text-3xl font-bold text-white">{formatCurrency(total)}</span>
         </div>
 
-        {/* Payment method */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-[#9d7bc8]">Forma de pagamento</p>
-          <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map(({ method, label, Icon }) => (
-              <button
-                key={method}
-                onClick={() => {
-                  setPaymentMethod(method)
-                  if (method !== 'cash') setAmountReceived(null)
-                }}
-                aria-pressed={paymentMethod === method}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-3 rounded-xl border font-medium text-sm transition-all',
-                  paymentMethod === method
-                    ? 'bg-[#10b981]/10 border-[#10b981] text-[#10b981]'
-                    : 'bg-[#0f0720] border-[#2d1550] text-[#9d7bc8] hover:border-[#4c1e8c] hover:text-white'
-                )}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Cash flow */}
-        {paymentMethod === 'cash' && (
+        {/* Combined order mode: skip payment, show add button */}
+        {activeOrder ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {getQuickValues(total).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setAmountReceived(v)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
-                    amountReceived === v
-                      ? 'bg-[#10b981]/10 border-[#10b981] text-[#10b981]'
-                      : 'bg-[#0f0720] border-[#2d1550] text-[#9d7bc8] hover:border-[#4c1e8c] hover:text-white'
-                  )}
-                >
-                  {formatCurrency(v)}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/40">
+              <ShoppingBag className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span className="text-amber-300 text-sm">
+                Adicionando ao pedido <strong>{activeOrder.name}</strong>
+              </span>
             </div>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={total}
-              value={amountReceived ?? ''}
-              onChange={(e) => {
-                if (e.target.value === '') { setAmountReceived(null); return }
-                const val = parseFloat(e.target.value)
-                if (!isNaN(val) && val >= 0) setAmountReceived(val)
-              }}
-              placeholder={`Mín. ${formatCurrency(total)}`}
-              className={cn(
-                'w-full px-3 py-2 rounded-lg bg-[#0f0720] border text-white placeholder-[#4a3570] focus:outline-none focus:ring-2 focus:ring-[#4c1e8c] text-lg',
-                isInsufficient ? 'border-red-500' : 'border-[#2d1550]'
-              )}
-            />
-            {isInsufficient && (
-              <p className="text-red-400 text-xs">Valor insuficiente. Mínimo: {formatCurrency(total)}</p>
-            )}
-            {change !== null && change >= 0 && (
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm text-[#9d7bc8]">Troco</span>
-                <span className="text-3xl font-bold text-[#10b981]">{formatCurrency(change)}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClose}
+                className="flex-1 py-3 rounded-xl border border-[#2d1550] text-[#9d7bc8] text-sm hover:bg-[#2d1550] hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddToOrder}
+                className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm transition-colors"
+              >
+                Adicionar ao Pedido
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Payment method */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[#9d7bc8]">Forma de pagamento</p>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHODS.map(({ method, label, Icon }) => (
+                  <button
+                    key={method}
+                    onClick={() => {
+                      setPaymentMethod(method)
+                      if (method !== 'cash') setAmountReceived(null)
+                    }}
+                    aria-pressed={paymentMethod === method}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-3 rounded-xl border font-medium text-sm transition-all',
+                      paymentMethod === method
+                        ? 'bg-[#10b981]/10 border-[#10b981] text-[#10b981]'
+                        : 'bg-[#0f0720] border-[#2d1550] text-[#9d7bc8] hover:border-[#4c1e8c] hover:text-white'
+                    )}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cash flow */}
+            {paymentMethod === 'cash' && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {getQuickValues(total).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setAmountReceived(v)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                        amountReceived === v
+                          ? 'bg-[#10b981]/10 border-[#10b981] text-[#10b981]'
+                          : 'bg-[#0f0720] border-[#2d1550] text-[#9d7bc8] hover:border-[#4c1e8c] hover:text-white'
+                      )}
+                    >
+                      {formatCurrency(v)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min={total}
+                  value={amountReceived ?? ''}
+                  onChange={(e) => {
+                    if (e.target.value === '') { setAmountReceived(null); return }
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0) setAmountReceived(val)
+                  }}
+                  placeholder={`Mín. ${formatCurrency(total)}`}
+                  className={cn(
+                    'w-full px-3 py-2 rounded-lg bg-[#0f0720] border text-white placeholder-[#4a3570] focus:outline-none focus:ring-2 focus:ring-[#4c1e8c] text-lg',
+                    isInsufficient ? 'border-red-500' : 'border-[#2d1550]'
+                  )}
+                />
+                {isInsufficient && (
+                  <p className="text-red-400 text-xs">Valor insuficiente. Mínimo: {formatCurrency(total)}</p>
+                )}
+                {change !== null && change >= 0 && (
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm text-[#9d7bc8]">Troco</span>
+                    <span className="text-3xl font-bold text-[#10b981]">{formatCurrency(change)}</span>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Confirm / Cancel */}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleClose}
-            className="flex-1 py-3 rounded-xl border border-[#2d1550] text-[#9d7bc8] text-sm hover:bg-[#2d1550] hover:text-white transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!canConfirm}
-            className="flex-1 py-3 rounded-xl bg-[#4c1e8c] text-white text-sm font-semibold hover:bg-[#5B2D8E] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isConfirming ? 'Confirmando...' : 'Confirmar venda'}
-          </button>
-        </div>
+            {/* Confirm / Cancel */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleClose}
+                className="flex-1 py-3 rounded-xl border border-[#2d1550] text-[#9d7bc8] text-sm hover:bg-[#2d1550] hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!canConfirm}
+                className="flex-1 py-3 rounded-xl bg-[#4c1e8c] text-white text-sm font-semibold hover:bg-[#5B2D8E] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isConfirming ? 'Confirmando...' : 'Confirmar venda'}
+              </button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
