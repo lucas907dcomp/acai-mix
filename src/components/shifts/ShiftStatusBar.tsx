@@ -79,7 +79,7 @@ export function ShiftStatusBar() {
           <span className="font-semibold text-[#10b981]">
             {formatCurrency(activeShift.total_sales)}
           </span>
-          {profile?.role === 'admin' && (
+          {profile?.role === 'admin' && activeShift.shift_number === 2 && (
             <button
               onClick={() => setConfirmOpen(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
