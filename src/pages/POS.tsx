@@ -9,7 +9,6 @@ import { ShiftOpenScreen } from '@/components/pdv/ShiftOpenScreen'
 import { ScaleConnectionStatus } from '@/components/pdv/ScaleConnectionStatus'
 import { WeightDisplay } from '@/components/pdv/WeightDisplay'
 import { PriceDisplay } from '@/components/pdv/PriceDisplay'
-import { CasquinhaToggle } from '@/components/pdv/CasquinhaToggle'
 import { PaymentMethodSelector } from '@/components/pdv/PaymentMethodSelector'
 import { CashFlow } from '@/components/pdv/CashFlow'
 import { ConfirmSaleButton } from '@/components/pdv/ConfirmSaleButton'
@@ -63,7 +62,6 @@ export default function POS() {
           <ScaleConnectionStatus />
           <WeightDisplay />
           {!isManualMode && <PriceDisplay />}
-          <CasquinhaToggle />
           <PaymentMethodSelector />
           {paymentMethod === 'cash' && (
             <div className="transition-all duration-200">
