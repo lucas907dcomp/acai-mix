@@ -15,6 +15,11 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
+        // Standalone print page — no AppLayout (no sidebar/nav)
+        path: '/shift-report',
+        lazy: () => import('@/pages/ShiftReport').then((m) => ({ Component: m.default })),
+      },
+      {
         element: <AppLayout />,
         children: [
           {

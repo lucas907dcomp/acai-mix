@@ -3,7 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-async function runCloseShift(): Promise<{ closed: number; opened: number }> {
+async function runCloseShift(
+  openNext: boolean
+): Promise<{ closed: number; opened: number }> {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data: openShifts, error: shiftsError } = await supabase
@@ -74,6 +76,8 @@ async function runCloseShift(): Promise<{ closed: number; opened: number }> {
 
     closedCount++
 
+    if (!openNext) continue
+
     const { error: openError } = await supabase.from('shifts').insert({
       location_id: shift.location_id,
       shift_number: newShiftNumber,
@@ -93,10 +97,23 @@ async function runCloseShift(): Promise<{ closed: number; opened: number }> {
   return { closed: closedCount, opened: openedCount }
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  let openNext = true
   try {
-    const result = await runCloseShift()
-    console.log(`close-shift: closed=${result.closed}, opened=${result.opened}`)
+    const ct = req.headers.get('content-type') ?? ''
+    if (ct.includes('application/json')) {
+      const body = await req.json()
+      if (body?.openNext === false) openNext = false
+    }
+  } catch {
+    // ignore parse errors — use default openNext=true
+  }
+
+  try {
+    const result = await runCloseShift(openNext)
+    console.log(
+      `close-shift: closed=${result.closed}, opened=${result.opened}, openNext=${openNext}`
+    )
     return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' },
     })

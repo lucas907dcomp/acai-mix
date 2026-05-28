@@ -48,9 +48,13 @@ export function ShiftStatusBar() {
   const handleConfirmClose = async () => {
     if (!profile) return
     setIsClosing(true)
+    const shiftId = activeShift?.id
     try {
       await closeShift(profile.id)
       setConfirmOpen(false)
+      if (shiftId) {
+        window.open(`/shift-report?shiftId=${shiftId}`, '_blank')
+      }
     } finally {
       setIsClosing(false)
     }
