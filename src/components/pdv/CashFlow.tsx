@@ -46,6 +46,7 @@ export function CashFlow() {
           min={amount}
           value={amountReceived ?? ''}
           onChange={(e) => {
+            if (e.target.value === '') { setAmountReceived(null); return }
             const val = parseFloat(e.target.value)
             if (!isNaN(val) && val >= 0) setAmountReceived(val)
           }}
