@@ -24,7 +24,7 @@ export function useScale() {
     return () => {
       unsubWeight()
       unsubConnection()
-      disconnect()
+      disconnect().catch(() => {})
     }
   }, [setProvider, updateWeight, updateConnection, disconnect])
 }
@@ -33,7 +33,7 @@ export function useReconnectSerial() {
   const { setProvider, updateWeight, updateConnection, disconnect } = useScaleStore()
 
   async function reconnectSerial() {
-    disconnect()
+    await disconnect()
     const provider = new SerialScaleProvider()
     setProvider(provider)
     provider.onWeight(updateWeight)

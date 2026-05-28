@@ -59,7 +59,7 @@ describe('MockScaleProvider', () => {
     provider.onConnectionChange(onConnection)
     await provider.connect()
 
-    provider.disconnect()
+    await provider.disconnect()
     vi.advanceTimersByTime(1000)
 
     expect(onWeight).not.toHaveBeenCalled()

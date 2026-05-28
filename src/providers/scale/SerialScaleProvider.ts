@@ -1,11 +1,12 @@
 import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 
-// UPX Wind D3 — demand mode via physical IMPRIME button
-// Press IMPRIME on scale to send current weight
-// Baud: 9600, 8N1
+// UPX Wind D3 — continuous streaming mode, 9600 8N1
+// Packet: STX (0x02) + 5 ASCII digits + ETX (0x03) = 7 bytes
+// "IIIII" = scale unstable (ignored)
 const BAUD_RATE = 9600
-const PACKET_LENGTH = 10
+const PACKET_LENGTH = 7
 const STX = 0x02
+const ETX = 0x03
 
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
@@ -53,12 +54,16 @@ export class SerialScaleProvider implements IScaleProvider {
     }
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     this.readLoopActive = false
-    this.reader?.cancel().catch(() => {})
-    this.port?.close().catch(() => {})
-    this.port = null
-    this.reader = null
+    if (this.reader) {
+      try { await this.reader.cancel() } catch { /* ignore */ }
+      this.reader = null
+    }
+    if (this.port) {
+      try { await this.port.close() } catch { /* ignore */ }
+      this.port = null
+    }
     this.connectionCallbacks.forEach((cb) => cb(false))
   }
 
@@ -119,8 +124,8 @@ export class SerialScaleProvider implements IScaleProvider {
 
   private parsePacket(buffer: number[]): number | null {
     if (buffer[0] !== STX) return null
-    if (buffer[8] !== 0x0d || buffer[9] !== 0x0a) return null
-    const weightStr = String.fromCharCode(...buffer.slice(1, 7))
+    if (buffer[6] !== ETX) return null
+    const weightStr = String.fromCharCode(...buffer.slice(1, 6))
     const grams = parseInt(weightStr, 10)
     return isNaN(grams) ? null : grams
   }

@@ -4,13 +4,11 @@ import { SerialScaleProvider } from '../SerialScaleProvider'
 // --- Mock Web Serial API ---
 
 function makePacket(grams: number): Uint8Array {
-  const padded = String(grams).padStart(6, '0')
+  const padded = String(grams).padStart(5, '0')
   return new Uint8Array([
     0x02,
     ...Array.from(padded).map((c) => c.charCodeAt(0)),
-    'g'.charCodeAt(0),
-    0x0d,
-    0x0a,
+    0x03,
   ])
 }
 
@@ -87,7 +85,7 @@ describe('SerialScaleProvider', () => {
     await provider.connect()
     expect(onConnection).toHaveBeenCalledWith(true)
 
-    provider.disconnect()
+    await provider.disconnect()
     expect(onConnection).toHaveBeenCalledWith(false)
   })
 

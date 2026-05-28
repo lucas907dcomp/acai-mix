@@ -27,7 +27,7 @@ export class MockScaleProvider implements IScaleProvider {
     this.startEmitting()
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     this.stopEmitting()
     this.connectionCallbacks.forEach((cb) => cb(false))
   }

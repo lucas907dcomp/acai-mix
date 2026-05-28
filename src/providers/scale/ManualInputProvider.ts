@@ -10,7 +10,7 @@ export class ManualInputProvider implements IScaleProvider {
     this.connectionCallbacks.forEach((cb) => cb(true))
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     this.connectionCallbacks.forEach((cb) => cb(false))
   }
 
