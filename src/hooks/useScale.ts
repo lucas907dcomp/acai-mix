@@ -5,28 +5,34 @@ import { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 import { useScaleStore } from '@/stores/scaleStore'
 
 export function useScale() {
-  const { setProvider, updateWeight, updateConnection, disconnect } = useScaleStore()
+  const { setProvider, updateWeight, updateConnection } = useScaleStore()
 
   useEffect(() => {
-    const useMock = import.meta.env.VITE_SCALE_MOCK === 'true'
-    // Default to manual mode so the cashier never needs to click
-    // "Digitar manualmente" on every page visit. Serial scale is
-    // opt-in via the "Conectar Balança" button in ScaleConnectionStatus.
-    const provider = useMock ? new MockScaleProvider() : new ManualInputProvider()
+    // If a provider is already active (e.g. serial connected), just re-subscribe
+    // to its callbacks — don't create a new provider or disconnect the existing one.
+    const existing = useScaleStore.getState().provider
 
-    setProvider(provider)
+    let activeProvider = existing
 
-    const unsubWeight = provider.onWeight(updateWeight)
-    const unsubConnection = provider.onConnectionChange(updateConnection)
+    if (!existing) {
+      // First mount: start in manual mode (or mock in dev).
+      // Serial is opt-in via the "Conectar Balança" button.
+      const useMock = import.meta.env.VITE_SCALE_MOCK === 'true'
+      activeProvider = useMock ? new MockScaleProvider() : new ManualInputProvider()
+      setProvider(activeProvider)
+      activeProvider.connect().catch(() => {})
+    }
 
-    provider.connect().catch(() => {})
+    const unsubWeight = activeProvider!.onWeight(updateWeight)
+    const unsubConnection = activeProvider!.onConnectionChange(updateConnection)
 
     return () => {
       unsubWeight()
       unsubConnection()
-      disconnect().catch(() => {})
+      // Do NOT disconnect here — the serial provider must survive route changes.
+      // Disconnection only happens explicitly via the UI button.
     }
-  }, [setProvider, updateWeight, updateConnection, disconnect])
+  }, [setProvider, updateWeight, updateConnection])
 }
 
 export function useReconnectSerial() {
