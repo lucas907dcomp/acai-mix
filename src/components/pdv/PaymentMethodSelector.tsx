@@ -47,7 +47,7 @@ export function PaymentMethodSelector() {
                 'text-[10px] px-1 py-0.5 rounded border font-mono leading-none',
                 selected
                   ? 'border-[#10b981]/40 text-[#10b981]/70'
-                  : 'border-[#2d1550] text-[#4a3570]'
+                  : 'border-[#3d1f70] text-[#7c5faa]'
               )}>
                 {key}
               </kbd>

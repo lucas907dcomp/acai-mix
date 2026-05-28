@@ -13,6 +13,24 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function playSaleSound() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 880
+    gain.gain.setValueAtTime(0.18, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.15)
+    osc.onended = () => ctx.close()
+  } catch {
+    // silently ignore — AudioContext not available
+  }
+}
+
 interface SaleState {
   capturedWeightGrams: number | null
   pricePerGram: number | null
@@ -134,6 +152,7 @@ export const useSaleStore = create<SaleState>((set, get) => ({
 
       useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
       queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
+      playSaleSound()
       toast.success(`Venda confirmada! ${formatCurrency(sale.amount)}`)
       get().reset()
     } catch (err) {
