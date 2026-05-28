@@ -58,17 +58,35 @@ export default function POS() {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         {/* Main POS area — 2/3 */}
-        <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 overflow-y-auto">
+        <div className="lg:col-span-2 flex flex-col gap-3 min-h-0">
+          {/* ── Info zone (top) ─────────────────────────────── */}
           <ScaleConnectionStatus />
           <WeightDisplay />
           {!isManualMode && <PriceDisplay />}
+
+          {/* Spacer: absorbs height changes so the action zone
+              below never shifts — CashFlow shrinks this gap,
+              not the confirm button position. */}
+          <div className="flex-1" />
+
+          {/* ── Action zone (bottom, always visible) ────────── */}
           <PaymentMethodSelector />
-          {paymentMethod === 'cash' && (
-            <div className="transition-all duration-200">
+
+          {/* CashFlow: always in the DOM, collapses to 0 when
+              not needed via grid-rows so no layout jump. */}
+          <div
+            className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+              paymentMethod === 'cash' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+            }`}
+          >
+            <div className="overflow-hidden">
               <CashFlow />
             </div>
-          )}
+          </div>
+
           <ConfirmSaleButton />
+
+          {/* Unit products — secondary, below the fold is OK */}
           <UnitProductsGrid />
         </div>
 
