@@ -219,7 +219,10 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('drain error:', msg)
-      toast.error('Falha ao sincronizar vendas. Tentará novamente ao reconectar.')
+      // Erros de rede são silenciosos — o poller vai tentar de novo automaticamente
+      if (!/failed to fetch|network error|fetch error/i.test(msg)) {
+        toast.error('Falha ao sincronizar vendas. Tentará novamente ao reconectar.')
+      }
     } finally {
       set({ isSyncing: false })
     }
@@ -243,5 +246,15 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     get().refreshPendingCount()
+
+    // Fallback: tenta sincronizar a cada 30s se há vendas pendentes.
+    // Necessário porque navigator.onLine pode não disparar 'online'
+    // quando o WiFi volta enquanto outro adaptador de rede está ativo.
+    setInterval(async () => {
+      const { pendingCount, isSyncing } = get()
+      if (pendingCount > 0 && !isSyncing) {
+        await get().drain()
+      }
+    }, 30_000)
   },
 }))
