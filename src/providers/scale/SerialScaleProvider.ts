@@ -17,7 +17,6 @@ export class SerialScaleProvider implements IScaleProvider {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private readLoopActive = false
   private reconnectAttempts = 0
-  private readonly maxReconnectAttempts = 3
 
   async connect(): Promise<void> {
     if (!('serial' in navigator)) {
@@ -117,21 +116,25 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private async handleDisconnect(): Promise<void> {
+    this.readLoopActive = false
     this.connectionCallbacks.forEach((cb) => cb(false))
 
-    while (this.reconnectAttempts < this.maxReconnectAttempts) {
+    // Tenta reconectar indefinidamente: 1s, 2s, 4s, depois a cada 10s.
+    // Interrompe apenas se disconnect() for chamado explicitamente (this.port = null).
+    while (this.port) {
       this.reconnectAttempts++
-      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, this.reconnectAttempts - 1) * 1000))
+      const delay = this.reconnectAttempts <= 3
+        ? Math.pow(2, this.reconnectAttempts - 1) * 1000
+        : 10_000
+      await new Promise((resolve) => setTimeout(resolve, delay))
       try {
-        if (this.port) {
-          await this.port.open({ baudRate: BAUD_RATE })
-          this.reconnectAttempts = 0
-          this.connectionCallbacks.forEach((cb) => cb(true))
-          this.startReadLoop()
-          return
-        }
-      } catch { /* retry */ }
+        if (!this.port) return
+        await this.openPort()
+        this.reconnectAttempts = 0
+        this.connectionCallbacks.forEach((cb) => cb(true))
+        this.startReadLoop()
+        return
+      } catch { /* porta ainda indisponível, tenta de novo */ }
     }
-    this.connectionCallbacks.forEach((cb) => cb(false))
   }
 }
