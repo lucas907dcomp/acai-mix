@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSaleStore } from '@/stores/saleStore'
 import { useScaleStore } from '@/stores/scaleStore'
+import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { ShiftStatusBar } from '@/components/shifts/ShiftStatusBar'
 import { ShiftOpenScreen } from '@/components/pdv/ShiftOpenScreen'
 import { ScaleConnectionStatus } from '@/components/pdv/ScaleConnectionStatus'
@@ -28,6 +29,7 @@ export default function POS() {
   const stopPolling = useShiftStore((s) => s.stopPolling)
   const paymentMethod = useSaleStore((s) => s.paymentMethod)
   const isManualMode = useScaleStore((s) => s.providerType === 'manual')
+  const activeOrderId = useCombinedOrderStore((s) => s.activeOrderId)
 
   useEffect(() => {
     if (profile?.location_id && !activeShift) {
@@ -67,23 +69,26 @@ export default function POS() {
 
           <div className="flex-1" />
 
-          <PaymentMethodSelector />
+          {/* Pagamento só aparece no fluxo normal — pedido conjunto não usa */}
+          {!activeOrderId && <PaymentMethodSelector />}
 
-          <div
-            className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-              paymentMethod === 'cash' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-            }`}
-          >
-            <div className="overflow-hidden">
-              <CashFlow />
+          {!activeOrderId && (
+            <div
+              className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                paymentMethod === 'cash' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <CashFlow />
+              </div>
             </div>
-          </div>
+          )}
 
           <ConfirmSaleButton />
           <CombinedOrderBar />
         </div>
 
-        {/* Painel direito com abas — 1/3 */}
+        {/* Painel direito — 1/3 */}
         <div className="lg:col-span-1 min-h-0">
           <RightPanel />
         </div>
