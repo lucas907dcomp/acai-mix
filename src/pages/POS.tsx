@@ -13,10 +13,8 @@ import { PriceDisplay } from '@/components/pdv/PriceDisplay'
 import { PaymentMethodSelector } from '@/components/pdv/PaymentMethodSelector'
 import { CashFlow } from '@/components/pdv/CashFlow'
 import { ConfirmSaleButton } from '@/components/pdv/ConfirmSaleButton'
-import { UnitProductsGrid } from '@/components/pdv/UnitProductsGrid'
-import { ShiftSalesTable } from '@/components/pdv/ShiftSalesTable'
 import { ManualModeDialog } from '@/components/pdv/ManualModeDialog'
-import { CombinedOrderBar } from '@/components/pdv/CombinedOrderBar'
+import { RightPanel } from '@/components/pdv/RightPanel'
 
 export default function POS() {
   useScale()
@@ -60,23 +58,16 @@ export default function POS() {
       <ShiftStatusBar />
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-        {/* Main POS area — 2/3 */}
+        {/* Fluxo principal — 2/3 */}
         <div className="lg:col-span-2 flex flex-col gap-3 min-h-0">
-          {/* ── Info zone (top) ─────────────────────────────── */}
           <ScaleConnectionStatus />
           <WeightDisplay />
           {!isManualMode && <PriceDisplay />}
 
-          {/* Spacer: absorbs height changes so the action zone
-              below never shifts — CashFlow shrinks this gap,
-              not the confirm button position. */}
           <div className="flex-1" />
 
-          {/* ── Action zone (bottom, always visible) ────────── */}
           <PaymentMethodSelector />
 
-          {/* CashFlow: always in the DOM, collapses to 0 when
-              not needed via grid-rows so no layout jump. */}
           <div
             className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
               paymentMethod === 'cash' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
@@ -88,15 +79,11 @@ export default function POS() {
           </div>
 
           <ConfirmSaleButton />
-          <CombinedOrderBar />
-
-          {/* Unit products — secondary, below the fold is OK */}
-          <UnitProductsGrid />
         </div>
 
-        {/* History panel — 1/3 */}
-        <div className="lg:col-span-1 min-h-0 max-h-[calc(100vh-12rem)] lg:max-h-none">
-          <ShiftSalesTable />
+        {/* Painel direito com abas — 1/3 */}
+        <div className="lg:col-span-1 min-h-0">
+          <RightPanel />
         </div>
       </div>
 
