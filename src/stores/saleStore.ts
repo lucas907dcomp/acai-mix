@@ -156,19 +156,23 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       toast.success(`Venda confirmada! ${formatCurrency(sale.amount)}`)
       get().reset()
     } catch (err) {
-      const isNetworkError = !navigator.onLine || err instanceof TypeError
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Erro desconhecido'
+      // Supabase re-lança TypeError de rede como PostgrestError — checar a mensagem também
+      const isNetworkError =
+        !navigator.onLine ||
+        err instanceof TypeError ||
+        /failed to fetch|network error|fetch error/i.test(msg)
       if (isNetworkError) {
         await useSyncStore.getState().addPending({ ...sale, created_offline: true })
         useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
         toast.error('Sem conexão. Venda salva offline.')
         get().reset()
       } else {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : typeof err === 'object' && err !== null && 'message' in err
-              ? String((err as { message: unknown }).message)
-              : 'Erro desconhecido'
         toast.error(`Erro ao confirmar venda: ${msg}`)
       }
     } finally {

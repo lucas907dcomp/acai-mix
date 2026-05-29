@@ -205,19 +205,22 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
       toast.success(`Pedido "${order.name}" confirmado! ${formatCurrency(sale.amount)}`)
       removeOrder()
     } catch (err) {
-      const isNetworkError = !navigator.onLine || err instanceof TypeError
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Erro desconhecido'
+      const isNetworkError =
+        !navigator.onLine ||
+        err instanceof TypeError ||
+        /failed to fetch|network error|fetch error/i.test(msg)
       if (isNetworkError) {
         await useSyncStore.getState().addPending({ ...sale, created_offline: true })
         useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
         toast.error('Sem conexão. Pedido salvo offline.')
         removeOrder()
       } else {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : typeof err === 'object' && err !== null && 'message' in err
-              ? String((err as { message: unknown }).message)
-              : 'Erro desconhecido'
         toast.error(`Erro ao confirmar pedido: ${msg}`)
       }
     }
