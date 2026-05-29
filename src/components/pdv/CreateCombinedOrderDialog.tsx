@@ -10,6 +10,7 @@ interface Props {
 export function CreateCombinedOrderDialog({ open, onClose }: Props) {
   const [name, setName] = useState('')
   const createOrder = useCombinedOrderStore((s) => s.createOrder)
+  const activateOrder = useCombinedOrderStore((s) => s.activateOrder)
 
   function handleClose() {
     setName('')
@@ -20,8 +21,11 @@ export function CreateCombinedOrderDialog({ open, onClose }: Props) {
     const trimmed = name.trim()
     if (!trimmed) return
     createOrder(trimmed)
+    const newOrder = useCombinedOrderStore.getState().orders.at(-1)
     setName('')
     onClose()
+    // setTimeout garante que o keyup do Enter não vaza para o botão âmbar
+    if (newOrder) setTimeout(() => activateOrder(newOrder.id), 0)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

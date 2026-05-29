@@ -3,6 +3,7 @@ import { X, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/stores/saleStore'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
+import { CombinedOrderEditDialog } from './CombinedOrderEditDialog'
 import type { CombinedOrder } from '@/stores/combinedOrderStore'
 
 interface Props {
@@ -15,6 +16,7 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
   const activateOrder = useCombinedOrderStore((s) => s.activateOrder)
   const cancelOrder = useCombinedOrderStore((s) => s.cancelOrder)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   function handleCardClick() {
     activateOrder(isActive ? null : order.id)
@@ -71,12 +73,16 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
         {formatCurrency(order.total)}
       </p>
 
-      {/* Item count + pay button */}
+      {/* Item count (abre edição) + pay button */}
       <div className="flex items-center justify-between mt-1">
-        <span className="flex items-center gap-0.5 text-[10px] text-[#9d7bc8]">
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowEdit(true) }}
+          className="flex items-center gap-0.5 text-[10px] text-[#9d7bc8] hover:text-white transition-colors"
+          title="Ver e editar itens"
+        >
           <ShoppingBag className="w-2.5 h-2.5" />
           {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
-        </span>
+        </button>
         {order.items.length > 0 && (
           <button
             onClick={(e) => {
@@ -91,5 +97,11 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
         )}
       </div>
     </div>
+
+    <CombinedOrderEditDialog
+      open={showEdit}
+      order={order}
+      onClose={() => setShowEdit(false)}
+    />
   )
 }
