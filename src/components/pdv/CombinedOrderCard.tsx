@@ -18,6 +18,9 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
 
   function handleCardClick() {
     activateOrder(isActive ? null : order.id)
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
   }
 
   function handleCancelClick(e: React.MouseEvent) {

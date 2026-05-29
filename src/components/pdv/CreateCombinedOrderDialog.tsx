@@ -10,7 +10,6 @@ interface Props {
 export function CreateCombinedOrderDialog({ open, onClose }: Props) {
   const [name, setName] = useState('')
   const createOrder = useCombinedOrderStore((s) => s.createOrder)
-  const activateOrder = useCombinedOrderStore((s) => s.activateOrder)
 
   function handleClose() {
     setName('')
@@ -21,10 +20,6 @@ export function CreateCombinedOrderDialog({ open, onClose }: Props) {
     const trimmed = name.trim()
     if (!trimmed) return
     createOrder(trimmed)
-    // Zustand state is synchronously updated — read the new order immediately
-    const updated = useCombinedOrderStore.getState().orders
-    const newOrder = updated[updated.length - 1]
-    if (newOrder) activateOrder(newOrder.id)
     setName('')
     onClose()
   }
