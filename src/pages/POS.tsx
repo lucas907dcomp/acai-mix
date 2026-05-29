@@ -13,6 +13,7 @@ import { PriceDisplay } from '@/components/pdv/PriceDisplay'
 import { PaymentMethodSelector } from '@/components/pdv/PaymentMethodSelector'
 import { CashFlow } from '@/components/pdv/CashFlow'
 import { ConfirmSaleButton } from '@/components/pdv/ConfirmSaleButton'
+import { CombinedOrderBar } from '@/components/pdv/CombinedOrderBar'
 import { ManualModeDialog } from '@/components/pdv/ManualModeDialog'
 import { RightPanel } from '@/components/pdv/RightPanel'
 
@@ -79,6 +80,7 @@ export default function POS() {
           </div>
 
           <ConfirmSaleButton />
+          <CombinedOrderBar />
         </div>
 
         {/* Painel direito com abas — 1/3 */}
