@@ -36,6 +36,7 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
   }
 
   return (
+    <>
     <div
       onClick={handleCardClick}
       role="button"
@@ -103,5 +104,6 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
       order={order}
       onClose={() => setShowEdit(false)}
     />
+    </>
   )
 }
