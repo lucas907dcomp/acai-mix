@@ -26,6 +26,10 @@ export function PriceDisplay() {
     }
   }
 
+  function handleRecapture() {
+    useSaleStore.getState().captureWeight(currentWeight ?? capturedWeight ?? 0, pricePerGram ?? 0)
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-xl bg-[#1a0b2e] border border-[#2d1550] p-4 animate-pulse h-28" />
@@ -34,7 +38,7 @@ export function PriceDisplay() {
 
   return (
     <div className="rounded-xl bg-[#1a0b2e] border border-[#2d1550] p-4 space-y-3">
-      {/* Peso × preço preview */}
+      {/* Peso × preço/kg */}
       {displayWeight !== null && pricePerGram && (
         <p className="text-sm text-[#9d7bc8]">
           {displayWeight}g ×{' '}
@@ -45,24 +49,7 @@ export function PriceDisplay() {
         </p>
       )}
 
-      {/* Breakdown when casquinha is active (AC4) — only meaningful
-          after the weight is captured. */}
-      {capturedWeight !== null && hasCasquinha && amount !== null && (
-        <div className="space-y-1 text-sm border-t border-[#2d1550] pt-3">
-          <div className="flex justify-between text-[#9d7bc8]">
-            <span>Açaí {capturedWeight}g</span>
-            <span className="tabular-nums">
-              {formatCurrency(amount - CASQUINHA_PRICE)}
-            </span>
-          </div>
-          <div className="flex justify-between text-[#9d7bc8]">
-            <span>+ Casquinha</span>
-            <span className="tabular-nums">{formatCurrency(CASQUINHA_PRICE)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Total + casquinha toggle (inline after capture) */}
+      {/* Toggle casquinha + total — sempre na mesma linha */}
       <div className="flex items-center justify-between gap-3">
         {capturedWeight !== null ? (
           <button
@@ -81,7 +68,6 @@ export function PriceDisplay() {
             <span className="text-sm font-medium leading-none">
               +{formatCurrency(CASQUINHA_PRICE)}
             </span>
-            {/* pill */}
             <span
               className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
                 hasCasquinha ? 'bg-[#10b981]' : 'bg-[#4a3570]'
@@ -95,7 +81,7 @@ export function PriceDisplay() {
             </span>
           </button>
         ) : (
-          <span /> /* spacer so total stays right-aligned */
+          <span />
         )}
 
         <div className="text-4xl font-bold tabular-nums text-white">
@@ -107,31 +93,30 @@ export function PriceDisplay() {
         </div>
       </div>
 
-      {capturedWeight !== null && (
-        <p className="text-xs text-[#10b981] font-medium">Peso capturado: {capturedWeight}g</p>
-      )}
-
-      {/* Capturar peso */}
-      <button
-        onClick={handleCapture}
-        disabled={!currentWeight || currentWeight <= 0 || !pricePerGram || capturedWeight !== null}
-        className="w-full py-2.5 rounded-lg bg-[#4c1e8c] hover:bg-[#5d2aa8] disabled:opacity-40 text-white font-semibold transition-colors"
-        aria-label="Capturar peso atual da balança"
-      >
-        {capturedWeight !== null ? 'Peso capturado ✓' : 'Capturar Peso'}
-      </button>
-
-      {capturedWeight !== null && (
+      {/* Capturar peso / status + Recapturar — ocupa sempre a mesma altura */}
+      {capturedWeight !== null ? (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center justify-center py-2.5 rounded-lg bg-[#10b981]/10 border border-[#10b981]/30">
+            <span className="text-xs text-[#10b981] font-semibold">
+              ✓ {capturedWeight}g capturado
+            </span>
+          </div>
+          <button
+            onClick={handleRecapture}
+            disabled={!currentWeight || currentWeight <= 0 || !pricePerGram}
+            className="shrink-0 px-4 py-2.5 rounded-lg border border-[#2d1550] text-[#9d7bc8] hover:text-white hover:border-[#4c1e8c] disabled:opacity-40 text-sm transition-colors"
+          >
+            Recapturar
+          </button>
+        </div>
+      ) : (
         <button
-          onClick={() =>
-            useSaleStore
-              .getState()
-              .captureWeight(currentWeight ?? capturedWeight, pricePerGram ?? 0)
-          }
-          disabled={!currentWeight || currentWeight <= 0 || !pricePerGram}
-          className="w-full py-1.5 rounded-lg border border-[#2d1550] text-[#9d7bc8] hover:text-white disabled:opacity-40 text-sm transition-colors"
+          onClick={handleCapture}
+          disabled={!currentWeight || currentWeight <= 0 || !pricePerGram || capturedWeight !== null}
+          className="w-full py-2.5 rounded-lg bg-[#4c1e8c] hover:bg-[#5d2aa8] disabled:opacity-40 text-white font-semibold transition-colors"
+          aria-label="Capturar peso atual da balança"
         >
-          Recapturar
+          Capturar Peso
         </button>
       )}
     </div>
