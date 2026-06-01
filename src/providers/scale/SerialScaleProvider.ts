@@ -8,6 +8,11 @@ const PACKET_LENGTH = 7
 const STX = 0x02
 const ETX = 0x03
 
+// If no valid packet arrives within this window the connection is considered
+// stale and a reconnect is forced. The scale streams continuously, so 6 s
+// with no data means either the USB was silently killed or the port locked up.
+const WATCHDOG_MS = 6_000
+
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
 
@@ -17,6 +22,7 @@ export class SerialScaleProvider implements IScaleProvider {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private readLoopActive = false
   private reconnectAttempts = 0
+  private watchdogTimer: ReturnType<typeof setTimeout> | null = null
 
   async connect(): Promise<void> {
     if (!('serial' in navigator)) {
@@ -33,6 +39,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.reconnectAttempts = 0
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
+    this.resetWatchdog()
   }
 
   private async openPort(): Promise<void> {
@@ -51,6 +58,7 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   async disconnect(): Promise<void> {
+    this.clearWatchdog()
     this.readLoopActive = false
     if (this.reader) {
       try { await this.reader.cancel() } catch { /* ignore */ }
@@ -82,11 +90,12 @@ export class SerialScaleProvider implements IScaleProvider {
 
   private async readLoop(): Promise<void> {
     const buffer: number[] = []
+    let exitedCleanly = false
 
     try {
       while (this.readLoopActive && this.reader) {
         const { value, done } = await this.reader.read()
-        if (done) break
+        if (done) { exitedCleanly = true; break }
 
         for (const byte of value) {
           buffer.push(byte)
@@ -95,15 +104,23 @@ export class SerialScaleProvider implements IScaleProvider {
             const weight = this.parsePacket(buffer)
             if (weight !== null) {
               this.weightCallbacks.forEach((cb) => cb(weight))
+              this.resetWatchdog()
             }
           }
         }
       }
     } catch {
-      // handled by disconnect
+      // Read error — port likely died without firing a 'disconnect' event
     } finally {
       this.reader?.releaseLock()
       this.reader = null
+    }
+
+    // Loop exited while we're supposed to be connected → force reconnect.
+    // This catches USB suspend / port lockup cases where the browser never
+    // fires the 'disconnect' event.
+    if (!exitedCleanly && this.readLoopActive && this.port) {
+      this.handleDisconnect()
     }
   }
 
@@ -115,24 +132,58 @@ export class SerialScaleProvider implements IScaleProvider {
     return isNaN(grams) ? null : grams
   }
 
+  // ── Watchdog ───────────────────────────────────────────────────────────────
+  // The scale streams packets continuously. If nothing arrives for WATCHDOG_MS
+  // the USB connection has silently died (common with Windows USB power saving).
+
+  private resetWatchdog(): void {
+    this.clearWatchdog()
+    this.watchdogTimer = setTimeout(() => {
+      if (this.readLoopActive && this.port) {
+        this.handleDisconnect()
+      }
+    }, WATCHDOG_MS)
+  }
+
+  private clearWatchdog(): void {
+    if (this.watchdogTimer !== null) {
+      clearTimeout(this.watchdogTimer)
+      this.watchdogTimer = null
+    }
+  }
+
+  // ── Reconnection ───────────────────────────────────────────────────────────
+
   private async handleDisconnect(): Promise<void> {
+    this.clearWatchdog()
     this.readLoopActive = false
     this.connectionCallbacks.forEach((cb) => cb(false))
 
-    // Tenta reconectar indefinidamente: 1s, 2s, 4s, depois a cada 10s.
-    // Interrompe apenas se disconnect() for chamado explicitamente (this.port = null).
+    // After a physical USB disconnect the old SerialPort object is invalid.
+    // navigator.serial.getPorts() returns a fresh reference once the device
+    // re-enumerates. We keep trying until disconnect() is called explicitly.
     while (this.port) {
       this.reconnectAttempts++
       const delay = this.reconnectAttempts <= 3
         ? Math.pow(2, this.reconnectAttempts - 1) * 1000
         : 10_000
       await new Promise((resolve) => setTimeout(resolve, delay))
+
       try {
         if (!this.port) return
+
+        // Prefer a freshly enumerated port over the stale object.
+        // getPorts() only returns ports the user has already granted access to.
+        const available = await navigator.serial.getPorts()
+        if (available.length > 0) {
+          this.port = available[0]
+        }
+
         await this.openPort()
         this.reconnectAttempts = 0
         this.connectionCallbacks.forEach((cb) => cb(true))
         this.startReadLoop()
+        this.resetWatchdog()
         return
       } catch { /* porta ainda indisponível, tenta de novo */ }
     }
