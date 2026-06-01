@@ -17,6 +17,7 @@ import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { getQuickValues } from '@/lib/quickValues'
 import { cn } from '@/lib/utils'
 import type { PaymentMethod, Product, Sale } from '@/types'
+import type { Json } from '@/types/supabase'
 
 interface Props {
   product: Product
@@ -103,7 +104,8 @@ export function UnitSaleModal({ product, open, onClose }: Props) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { status: _s, cancelled_at: _ca, cancelled_by: _cb, ...saleInsert } = sale
+    const { status: _s, cancelled_at: _ca, cancelled_by: _cb, payment_split: _ps, ...saleInsertBase } = sale
+    const saleInsert = { ...saleInsertBase, payment_split: sale.payment_split as unknown as Json | null }
 
     try {
       const { error } = await supabase.from('sales').insert(saleInsert)
