@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/types/supabase'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/authStore'
 import { useScaleStore } from '@/stores/scaleStore'
@@ -214,7 +215,8 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { status: _s, cancelled_at: _ca, cancelled_by: _cb, ...saleInsert } = sale
+    const { status: _s, cancelled_at: _ca, cancelled_by: _cb, payment_split: _ps, ...saleInsertBase } = sale
+    const saleInsert = { ...saleInsertBase, payment_split: sale.payment_split as unknown as Json | null }
 
     try {
       const { error } = await supabase.from('sales').insert(saleInsert)
