@@ -8,11 +8,6 @@ const PACKET_LENGTH = 7
 const STX = 0x02
 const ETX = 0x03
 
-// If no valid packet arrives within this window the connection is considered
-// stale and a reconnect is forced. The scale streams continuously, so 6 s
-// with no data means either the USB was silently killed or the port locked up.
-const WATCHDOG_MS = 6_000
-
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
 
@@ -22,8 +17,6 @@ export class SerialScaleProvider implements IScaleProvider {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private readLoopActive = false
   private reconnectAttempts = 0
-  private watchdogTimer: ReturnType<typeof setTimeout> | null = null
-  private keepAliveTimer: ReturnType<typeof setInterval> | null = null
 
   async connect(): Promise<void> {
     if (!('serial' in navigator)) {
@@ -40,8 +33,6 @@ export class SerialScaleProvider implements IScaleProvider {
     this.reconnectAttempts = 0
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
-    this.resetWatchdog()
-    this.startKeepAlive()
   }
 
   private async openPort(): Promise<void> {
@@ -60,8 +51,6 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   async disconnect(): Promise<void> {
-    this.clearWatchdog()
-    this.stopKeepAlive()
     this.readLoopActive = false
     if (this.reader) {
       try { await this.reader.cancel() } catch { /* ignore */ }
@@ -93,12 +82,11 @@ export class SerialScaleProvider implements IScaleProvider {
 
   private async readLoop(): Promise<void> {
     const buffer: number[] = []
-    let exitedCleanly = false
 
     try {
       while (this.readLoopActive && this.reader) {
         const { value, done } = await this.reader.read()
-        if (done) { exitedCleanly = true; break }
+        if (done) break
 
         for (const byte of value) {
           buffer.push(byte)
@@ -107,23 +95,15 @@ export class SerialScaleProvider implements IScaleProvider {
             const weight = this.parsePacket(buffer)
             if (weight !== null) {
               this.weightCallbacks.forEach((cb) => cb(weight))
-              this.resetWatchdog()
             }
           }
         }
       }
     } catch {
-      // Read error — port likely died without firing a 'disconnect' event
+      // handled by disconnect
     } finally {
       this.reader?.releaseLock()
       this.reader = null
-    }
-
-    // Loop exited while we're supposed to be connected → force reconnect.
-    // This catches USB suspend / port lockup cases where the browser never
-    // fires the 'disconnect' event.
-    if (!exitedCleanly && this.readLoopActive && this.port) {
-      this.handleDisconnect()
     }
   }
 
@@ -135,81 +115,24 @@ export class SerialScaleProvider implements IScaleProvider {
     return isNaN(grams) ? null : grams
   }
 
-  // ── Watchdog ───────────────────────────────────────────────────────────────
-  // The scale streams packets continuously. If nothing arrives for WATCHDOG_MS
-  // the USB connection has silently died (common with Windows USB power saving).
-
-  private resetWatchdog(): void {
-    this.clearWatchdog()
-    this.watchdogTimer = setTimeout(() => {
-      if (this.readLoopActive && this.port) {
-        this.handleDisconnect()
-      }
-    }, WATCHDOG_MS)
-  }
-
-  // ── Keep-alive ─────────────────────────────────────────────────────────────
-  // Reasserts DTR every 2 s to prevent Windows USB power management from
-  // suspending the device even when the GUI option is hidden or unavailable.
-
-  private startKeepAlive(): void {
-    this.stopKeepAlive()
-    this.keepAliveTimer = setInterval(async () => {
-      if (!this.port || !this.readLoopActive) return
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (this.port as any).setSignals({ dataTerminalReady: true })
-      } catch { /* port may have just disconnected — watchdog will handle it */ }
-    }, 2_000)
-  }
-
-  private stopKeepAlive(): void {
-    if (this.keepAliveTimer !== null) {
-      clearInterval(this.keepAliveTimer)
-      this.keepAliveTimer = null
-    }
-  }
-
-  private clearWatchdog(): void {
-    if (this.watchdogTimer !== null) {
-      clearTimeout(this.watchdogTimer)
-      this.watchdogTimer = null
-    }
-  }
-
-  // ── Reconnection ───────────────────────────────────────────────────────────
-
   private async handleDisconnect(): Promise<void> {
-    this.clearWatchdog()
     this.readLoopActive = false
     this.connectionCallbacks.forEach((cb) => cb(false))
 
-    // After a physical USB disconnect the old SerialPort object is invalid.
-    // navigator.serial.getPorts() returns a fresh reference once the device
-    // re-enumerates. We keep trying until disconnect() is called explicitly.
+    // Tenta reconectar indefinidamente: 1s, 2s, 4s, depois a cada 10s.
+    // Interrompe apenas se disconnect() for chamado explicitamente (this.port = null).
     while (this.port) {
       this.reconnectAttempts++
       const delay = this.reconnectAttempts <= 3
         ? Math.pow(2, this.reconnectAttempts - 1) * 1000
         : 10_000
       await new Promise((resolve) => setTimeout(resolve, delay))
-
       try {
         if (!this.port) return
-
-        // Prefer a freshly enumerated port over the stale object.
-        // getPorts() only returns ports the user has already granted access to.
-        const available = await navigator.serial.getPorts()
-        if (available.length > 0) {
-          this.port = available[0]
-        }
-
         await this.openPort()
         this.reconnectAttempts = 0
         this.connectionCallbacks.forEach((cb) => cb(true))
         this.startReadLoop()
-        this.resetWatchdog()
-        this.startKeepAlive()
         return
       } catch { /* porta ainda indisponível, tenta de novo */ }
     }
