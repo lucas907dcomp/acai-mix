@@ -39,6 +39,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_consumptions: {
+        Row: {
+          id: string
+          user_id: string
+          location_id: string
+          amount: number
+          description: string | null
+          consumed_at: string
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          location_id: string
+          amount: number
+          description?: string | null
+          consumed_at?: string
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          location_id?: string
+          amount?: number
+          description?: string | null
+          consumed_at?: string
+          created_by?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_consumptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_consumptions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           active: boolean

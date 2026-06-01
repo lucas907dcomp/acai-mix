@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/stores/saleStore'
 import {
   useStaffMembers,
   useEmployeeConsumptions,
@@ -21,7 +21,7 @@ import {
 
 const formSchema = z.object({
   user_id: z.string().min(1, 'Selecione a funcionária'),
-  amount: z.number({ invalid_type_error: 'Informe o valor' }).positive('Valor deve ser positivo'),
+  amount: z.number().positive('Valor deve ser positivo'),
   description: z.string().max(200, 'Máximo 200 caracteres').optional(),
   consumed_at: z.string().min(1, 'Informe a data'),
 })
