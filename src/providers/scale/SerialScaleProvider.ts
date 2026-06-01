@@ -23,6 +23,7 @@ export class SerialScaleProvider implements IScaleProvider {
   private readLoopActive = false
   private reconnectAttempts = 0
   private watchdogTimer: ReturnType<typeof setTimeout> | null = null
+  private keepAliveTimer: ReturnType<typeof setInterval> | null = null
 
   async connect(): Promise<void> {
     if (!('serial' in navigator)) {
@@ -40,6 +41,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
     this.resetWatchdog()
+    this.startKeepAlive()
   }
 
   private async openPort(): Promise<void> {
@@ -59,6 +61,7 @@ export class SerialScaleProvider implements IScaleProvider {
 
   async disconnect(): Promise<void> {
     this.clearWatchdog()
+    this.stopKeepAlive()
     this.readLoopActive = false
     if (this.reader) {
       try { await this.reader.cancel() } catch { /* ignore */ }
@@ -145,6 +148,28 @@ export class SerialScaleProvider implements IScaleProvider {
     }, WATCHDOG_MS)
   }
 
+  // ── Keep-alive ─────────────────────────────────────────────────────────────
+  // Reasserts DTR every 2 s to prevent Windows USB power management from
+  // suspending the device even when the GUI option is hidden or unavailable.
+
+  private startKeepAlive(): void {
+    this.stopKeepAlive()
+    this.keepAliveTimer = setInterval(async () => {
+      if (!this.port || !this.readLoopActive) return
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (this.port as any).setSignals({ dataTerminalReady: true })
+      } catch { /* port may have just disconnected — watchdog will handle it */ }
+    }, 2_000)
+  }
+
+  private stopKeepAlive(): void {
+    if (this.keepAliveTimer !== null) {
+      clearInterval(this.keepAliveTimer)
+      this.keepAliveTimer = null
+    }
+  }
+
   private clearWatchdog(): void {
     if (this.watchdogTimer !== null) {
       clearTimeout(this.watchdogTimer)
@@ -184,6 +209,7 @@ export class SerialScaleProvider implements IScaleProvider {
         this.connectionCallbacks.forEach((cb) => cb(true))
         this.startReadLoop()
         this.resetWatchdog()
+        this.startKeepAlive()
         return
       } catch { /* porta ainda indisponível, tenta de novo */ }
     }
