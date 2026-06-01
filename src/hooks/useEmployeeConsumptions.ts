@@ -1,25 +1,53 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import type { EmployeeConsumption, UserProfile } from '@/types'
+import type { Employee, EmployeeConsumption } from '@/types'
 
-export function useStaffMembers() {
+// ─── Employees ────────────────────────────────────────────────────────────────
+
+export function useEmployees() {
   const profile = useAuthStore((s) => s.profile)
   return useQuery({
-    queryKey: ['staff-members', profile?.location_id],
+    queryKey: ['employees', profile?.location_id],
     enabled: !!profile?.location_id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('employees')
         .select('*')
         .eq('location_id', profile!.location_id)
-        .eq('role', 'staff')
-        .order('display_name')
+        .order('name')
       if (error) throw error
-      return data as UserProfile[]
+      return data as Employee[]
     },
   })
 }
+
+export function useAddEmployee() {
+  const profile = useAuthStore((s) => s.profile)
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase
+        .from('employees')
+        .insert({ name: name.trim(), location_id: profile!.location_id })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] }),
+  })
+}
+
+export function useToggleEmployee() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const { error } = await supabase.from('employees').update({ active }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] }),
+  })
+}
+
+// ─── Consumptions ─────────────────────────────────────────────────────────────
 
 export function useEmployeeConsumptions(year: number, month: number) {
   const profile = useAuthStore((s) => s.profile)
@@ -47,10 +75,9 @@ export function useEmployeeConsumptions(year: number, month: number) {
 export function useAddConsumption() {
   const profile = useAuthStore((s) => s.profile)
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (payload: {
-      user_id: string
+      employee_id: string
       amount: number
       description: string
       consumed_at: string
@@ -62,9 +89,7 @@ export function useAddConsumption() {
       })
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employee-consumptions'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employee-consumptions'] }),
   })
 }
 
@@ -75,8 +100,6 @@ export function useDeleteConsumption() {
       const { error } = await supabase.from('employee_consumptions').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employee-consumptions'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employee-consumptions'] }),
   })
 }

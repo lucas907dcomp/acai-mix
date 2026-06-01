@@ -109,9 +109,17 @@ export type CombinedItemRecord =
       amount: number
     }
 
+export interface Employee {
+  id: string
+  location_id: string
+  name: string
+  active: boolean
+  created_at: string
+}
+
 export interface EmployeeConsumption {
   id: string
-  user_id: string
+  employee_id: string
   location_id: string
   amount: number
   description: string | null
