@@ -109,6 +109,17 @@ export type CombinedItemRecord =
       amount: number
     }
 
+export interface EmployeeConsumption {
+  id: string
+  user_id: string
+  location_id: string
+  amount: number
+  description: string | null
+  consumed_at: string
+  created_by: string
+  created_at: string
+}
+
 // Extends Sale with the joined products row returned by Supabase when
 // using `.select('*, products(name, product_type)')`. The field is
 // optional/nullable because legacy rows may predate the product join.
