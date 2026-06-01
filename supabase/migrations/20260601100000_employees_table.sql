@@ -34,6 +34,9 @@ CREATE POLICY "employees_admin_all"
   );
 
 -- Ajustar employee_consumptions: trocar user_id por employee_id
+-- A policy ec_staff_select_own depende de user_id, então precisa ser removida antes
+DROP POLICY IF EXISTS "ec_staff_select_own" ON employee_consumptions;
+
 ALTER TABLE employee_consumptions
   DROP COLUMN user_id,
   ADD COLUMN employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE;
