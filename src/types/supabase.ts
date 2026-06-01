@@ -239,6 +239,7 @@ export type Database = {
           combined_order_name: string | null
           created_at: string
           created_offline: boolean
+          payment_split: Json | null
           has_casquinha: boolean
           id: string
           is_combined: boolean
@@ -267,6 +268,7 @@ export type Database = {
           has_casquinha?: boolean
           id: string
           is_combined?: boolean
+          payment_split?: Json | null
           location_id: string
           payment_method: string
           price_per_gram: number
@@ -292,6 +294,7 @@ export type Database = {
           has_casquinha?: boolean
           id?: string
           is_combined?: boolean
+          payment_split?: Json | null
           location_id?: string
           payment_method?: string
           price_per_gram?: number

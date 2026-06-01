@@ -1,5 +1,10 @@
 export type PaymentMethod = 'pix' | 'credit' | 'debit' | 'cash'
 
+export interface PaymentSplitItem {
+  method: PaymentMethod
+  amount: number
+}
+
 export type UserRole = 'admin' | 'staff'
 
 export type ShiftStatus = 'open' | 'closed' | 'provisional'
@@ -89,6 +94,8 @@ export interface Sale {
   is_combined?: boolean
   combined_order_name?: string | null
   combined_items?: CombinedItemRecord[] | null
+  // Pagamento dividido — presente apenas quando o cliente paga com dois meios
+  payment_split?: PaymentSplitItem[] | null
 }
 
 export type CombinedItemRecord =

@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/queryClient'
-import type { PaymentMethod, Shift } from '@/types'
+import type { PaymentMethod, PaymentSplitItem, Shift } from '@/types'
 
 interface ShiftState {
   activeShift: Shift | null
@@ -13,6 +13,7 @@ interface ShiftState {
   openShift: (locationId: string, openedBy: string) => Promise<void>
   closeShift: (closedBy: string) => Promise<void>
   updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
+  updateTotalsFromSplit: (amount: number, split: PaymentSplitItem[]) => void
   reverseTotals: (amount: number, paymentMethod: PaymentMethod) => void
   clearShift: () => void
   startPolling: (locationId: string) => void
@@ -123,6 +124,24 @@ export const useShiftStore = create<ShiftState>()(
               paymentMethod === 'cash'
                 ? Math.round((activeShift.total_cash + amount) * 100) / 100
                 : activeShift.total_cash,
+          },
+        })
+      },
+
+      updateTotalsFromSplit: (amount, split) => {
+        const { activeShift } = get()
+        if (!activeShift) return
+        const pix  = split.filter((s) => s.method === 'pix').reduce((a, s) => a + s.amount, 0)
+        const card = split.filter((s) => s.method === 'credit' || s.method === 'debit').reduce((a, s) => a + s.amount, 0)
+        const cash = split.filter((s) => s.method === 'cash').reduce((a, s) => a + s.amount, 0)
+        set({
+          activeShift: {
+            ...activeShift,
+            sale_count:  activeShift.sale_count + 1,
+            total_sales: Math.round((activeShift.total_sales + amount) * 100) / 100,
+            total_pix:   Math.round((activeShift.total_pix   + pix)    * 100) / 100,
+            total_card:  Math.round((activeShift.total_card  + card)   * 100) / 100,
+            total_cash:  Math.round((activeShift.total_cash  + cash)   * 100) / 100,
           },
         })
       },

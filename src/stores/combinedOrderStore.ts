@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { formatCurrency } from '@/stores/saleStore'
-import type { PaymentMethod, Sale } from '@/types'
+import type { PaymentMethod, PaymentSplitItem, Sale } from '@/types'
 
 export interface CombinedOrderWeightItem {
   id: string
@@ -50,7 +50,8 @@ interface CombinedOrderState {
   confirmOrder: (
     orderId: string,
     paymentMethod: PaymentMethod,
-    amountReceived?: number | null
+    amountReceived?: number | null,
+    paymentSplit?: PaymentSplitItem[] | null
   ) => Promise<void>
 }
 
@@ -121,7 +122,7 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
     }))
   },
 
-  confirmOrder: async (orderId, paymentMethod, amountReceived) => {
+  confirmOrder: async (orderId, paymentMethod, amountReceived, paymentSplit) => {
     const { orders, activeOrderId } = get()
     const order = orders.find((o) => o.id === orderId)
     if (!order || order.items.length === 0) return
@@ -140,9 +141,13 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
       .filter((i): i is CombinedOrderWeightItem => i.type === 'weight')
       .reduce((sum, i) => sum + i.weight_grams, 0)
 
+    const cashPortion = paymentSplit
+      ? (paymentSplit.find((s) => s.method === 'cash')?.amount ?? null)
+      : (paymentMethod === 'cash' ? total : null)
+
     const change =
-      paymentMethod === 'cash' && amountReceived != null
-        ? Math.round(amountReceived * 100 - total * 100) / 100
+      cashPortion !== null && amountReceived != null
+        ? Math.round(amountReceived * 100 - cashPortion * 100) / 100
         : null
 
     const combinedItems = order.items.map((i) => {
@@ -175,8 +180,9 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
       price_per_gram: 0,
       amount: Math.round(total * 100) / 100,
       payment_method: paymentMethod,
-      amount_received: paymentMethod === 'cash' ? (amountReceived ?? null) : null,
-      change_returned: paymentMethod === 'cash' ? change : null,
+      amount_received: cashPortion !== null ? (amountReceived ?? null) : null,
+      change_returned: cashPortion !== null ? change : null,
+      payment_split: paymentSplit ?? null,
       sync_reconciled: false,
       synced_at: null,
       created_offline: false,
@@ -200,7 +206,11 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
       const { error } = await supabase.from('sales').insert(saleInsert)
       if (error) throw error
 
-      useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+      if (sale.payment_split) {
+        useShiftStore.getState().updateTotalsFromSplit(sale.amount, sale.payment_split)
+      } else {
+        useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+      }
       queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
       toast.success(`Pedido "${order.name}" confirmado! ${formatCurrency(sale.amount)}`)
       removeOrder()
@@ -217,7 +227,11 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
         /failed to fetch|network error|fetch error/i.test(msg)
       if (isNetworkError) {
         await useSyncStore.getState().addPending({ ...sale, created_offline: true })
-        useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+        if (sale.payment_split) {
+          useShiftStore.getState().updateTotalsFromSplit(sale.amount, sale.payment_split)
+        } else {
+          useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+        }
         toast.error('Sem conexão. Pedido salvo offline.')
         removeOrder()
       } else {

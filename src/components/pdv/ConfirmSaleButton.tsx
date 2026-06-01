@@ -14,6 +14,10 @@ export function ConfirmSaleButton() {
   const confirmSale = useSaleStore((s) => s.confirmSale)
   const reset = useSaleStore((s) => s.reset)
 
+  const secondMethod         = useSaleStore((s) => s.secondMethod)
+  const secondAmount         = useSaleStore((s) => s.secondAmount)
+  const secondAmountReceived = useSaleStore((s) => s.secondAmountReceived)
+
   const activeOrderId = useCombinedOrderStore((s) => s.activeOrderId)
   const orders = useCombinedOrderStore((s) => s.orders)
   const addWeightItem = useCombinedOrderStore((s) => s.addWeightItem)
@@ -62,11 +66,25 @@ export function ConfirmSaleButton() {
     )
   }
 
-  // Normal mode — original behavior
-  const cashInsufficient =
-    paymentMethod === 'cash' && (amountReceived === null || amountReceived < (amount ?? 0))
+  // Normal mode — original behavior + split validation
+  const isSplit = secondMethod !== null && secondAmount !== null
+  const firstPortion = isSplit && amount !== null ? amount - secondAmount! : amount ?? 0
 
-  const disabled = !amount || !paymentMethod || cashInsufficient || isConfirming
+  const cashInsufficient = !isSplit
+    ? paymentMethod === 'cash' && (amountReceived === null || amountReceived < (amount ?? 0))
+    : paymentMethod === 'cash'
+      ? amountReceived === null || amountReceived < firstPortion
+      : secondMethod === 'cash'
+        ? secondAmountReceived === null || secondAmountReceived < (secondAmount ?? 0)
+        : false
+
+  const splitIncomplete = isSplit && (
+    secondAmount === null ||
+    secondAmount <= 0 ||
+    secondAmount >= (amount ?? 0)
+  )
+
+  const disabled = !amount || !paymentMethod || cashInsufficient || splitIncomplete || isConfirming
 
   return (
     <button

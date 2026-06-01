@@ -7,7 +7,7 @@ import { useScaleStore } from '@/stores/scaleStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { calcSaleAmount } from '@/constants/pricing'
-import type { PaymentMethod, Sale } from '@/types'
+import type { PaymentMethod, PaymentSplitItem, Sale } from '@/types'
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -39,12 +39,21 @@ interface SaleState {
   paymentMethod: PaymentMethod | null
   amountReceived: number | null
   change: number | null
+  // Split payment state
+  secondMethod: PaymentMethod | null
+  secondAmount: number | null
+  secondAmountReceived: number | null
+  secondChange: number | null
   isConfirming: boolean
   captureWeight: (grams: number, pricePerGram: number) => void
   captureAmount: (amount: number, pricePerGram: number) => void
   toggleCasquinha: () => void
   setPaymentMethod: (method: PaymentMethod) => void
   setAmountReceived: (value: number | null) => void
+  setSecondMethod: (method: PaymentMethod | null) => void
+  setSecondAmount: (amount: number | null) => void
+  setSecondAmountReceived: (value: number | null) => void
+  clearSplit: () => void
   confirmSale: () => Promise<void>
   reset: () => void
 }
@@ -57,6 +66,10 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   paymentMethod: null,
   amountReceived: null,
   change: null,
+  secondMethod: null,
+  secondAmount: null,
+  secondAmountReceived: null,
+  secondChange: null,
   isConfirming: false,
 
   captureWeight: (grams, pricePerGram) => {
@@ -87,9 +100,15 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   },
 
   setPaymentMethod: (method) => {
-    set({ paymentMethod: method })
-    if (method !== 'cash') {
-      set({ amountReceived: null, change: null })
+    const { secondMethod } = get()
+    // Clear split if new first method equals the current second method
+    if (method === secondMethod) {
+      set({ paymentMethod: method, secondMethod: null, secondAmount: null, secondAmountReceived: null, secondChange: null, amountReceived: null, change: null })
+    } else {
+      set({ paymentMethod: method })
+      if (method !== 'cash') {
+        set({ amountReceived: null, change: null })
+      }
     }
   },
 
@@ -98,12 +117,52 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       set({ amountReceived: null, change: null })
       return
     }
-    const { amount } = get()
-    const change =
-      amount !== null
-        ? Math.round(value * 100 - amount * 100) / 100
-        : null
+    const { amount, secondMethod, secondAmount } = get()
+    // In split with first=cash, collect only the first portion
+    const cashPortion =
+      amount !== null && secondMethod !== null && secondAmount !== null
+        ? amount - secondAmount
+        : amount
+    const change = cashPortion !== null ? Math.round(value * 100 - cashPortion * 100) / 100 : null
     set({ amountReceived: value, change })
+  },
+
+  setSecondMethod: (method) => {
+    if (method === null) {
+      set({ secondMethod: null, secondAmount: null, secondAmountReceived: null, secondChange: null })
+    } else {
+      set({ secondMethod: method, secondAmount: null, secondAmountReceived: null, secondChange: null })
+    }
+  },
+
+  setSecondAmount: (amount) => {
+    if (amount === null) {
+      set({ secondAmount: null, secondAmountReceived: null, secondChange: null })
+      return
+    }
+    // Recompute first-cash change with the updated first portion
+    const { amount: total, paymentMethod, amountReceived } = get()
+    let change = get().change
+    if (paymentMethod === 'cash' && amountReceived !== null && total !== null) {
+      const firstPortion = total - amount
+      change = Math.round(amountReceived * 100 - firstPortion * 100) / 100
+    }
+    set({ secondAmount: amount, change, secondAmountReceived: null, secondChange: null })
+  },
+
+  setSecondAmountReceived: (value) => {
+    if (value === null) {
+      set({ secondAmountReceived: null, secondChange: null })
+      return
+    }
+    const { secondAmount } = get()
+    const secondChange =
+      secondAmount !== null ? Math.round(value * 100 - secondAmount * 100) / 100 : null
+    set({ secondAmountReceived: value, secondChange })
+  },
+
+  clearSplit: () => {
+    set({ secondMethod: null, secondAmount: null, secondAmountReceived: null, secondChange: null })
   },
 
   confirmSale: async () => {
@@ -123,6 +182,18 @@ export const useSaleStore = create<SaleState>((set, get) => ({
 
     set({ isConfirming: true })
 
+    const isSplit = state.secondMethod !== null && state.secondAmount !== null
+    const paymentSplit: PaymentSplitItem[] | null = isSplit
+      ? [
+          { method: state.paymentMethod, amount: state.amount - state.secondAmount! },
+          { method: state.secondMethod!, amount: state.secondAmount! },
+        ]
+      : null
+
+    const cashMethod = isSplit
+      ? (state.paymentMethod === 'cash' ? 'first' : state.secondMethod === 'cash' ? 'second' : null)
+      : (state.paymentMethod === 'cash' ? 'first' : null)
+
     const sale: Sale = {
       id: crypto.randomUUID(),
       shift_id: activeShift.id,
@@ -132,15 +203,14 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       price_per_gram: state.pricePerGram!,
       amount: state.amount,
       payment_method: state.paymentMethod,
-      amount_received: state.paymentMethod === 'cash' ? state.amountReceived : null,
-      change_returned: state.paymentMethod === 'cash' ? state.change : null,
+      amount_received: cashMethod === 'first' ? state.amountReceived : cashMethod === 'second' ? state.secondAmountReceived : null,
+      change_returned: cashMethod === 'first' ? state.change : cashMethod === 'second' ? state.secondChange : null,
       sync_reconciled: false,
       synced_at: null,
       created_offline: false,
       created_at: new Date().toISOString(),
-      // EPIC-10 / Story 10.1 — casquinha add-on flag.
-      // The R$ 1,00 is already included in `amount` via calcSaleAmount.
       has_casquinha: state.hasCasquinha,
+      payment_split: paymentSplit,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -150,7 +220,11 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       const { error } = await supabase.from('sales').insert(saleInsert)
       if (error) throw error
 
-      useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+      if (sale.payment_split) {
+        useShiftStore.getState().updateTotalsFromSplit(sale.amount, sale.payment_split)
+      } else {
+        useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+      }
       queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
       playSaleSound()
       toast.success(`Venda confirmada! ${formatCurrency(sale.amount)}`)
@@ -169,7 +243,11 @@ export const useSaleStore = create<SaleState>((set, get) => ({
         /failed to fetch|network error|fetch error/i.test(msg)
       if (isNetworkError) {
         await useSyncStore.getState().addPending({ ...sale, created_offline: true })
-        useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+        if (sale.payment_split) {
+          useShiftStore.getState().updateTotalsFromSplit(sale.amount, sale.payment_split)
+        } else {
+          useShiftStore.getState().updateTotals(sale.amount, sale.payment_method)
+        }
         toast.error('Sem conexão. Venda salva offline.')
         get().reset()
       } else {
@@ -189,5 +267,9 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       paymentMethod: null,
       amountReceived: null,
       change: null,
+      secondMethod: null,
+      secondAmount: null,
+      secondAmountReceived: null,
+      secondChange: null,
     }),
 }))

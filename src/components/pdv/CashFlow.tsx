@@ -3,20 +3,35 @@ import { getQuickValues } from '@/lib/quickValues'
 
 export function CashFlow() {
   const amount = useSaleStore((s) => s.amount)
+  const paymentMethod = useSaleStore((s) => s.paymentMethod)
+  const secondMethod = useSaleStore((s) => s.secondMethod)
+  const secondAmount = useSaleStore((s) => s.secondAmount)
   const amountReceived = useSaleStore((s) => s.amountReceived)
   const change = useSaleStore((s) => s.change)
   const setAmountReceived = useSaleStore((s) => s.setAmountReceived)
 
-  if (amount === null) return null
+  if (amount === null || paymentMethod !== 'cash') return null
 
-  const quickValues = getQuickValues(amount)
-  const isInsufficient = amountReceived !== null && amountReceived < amount
+  // In split mode with first=cash, collect only the first portion
+  const cashPortion =
+    secondMethod !== null && secondAmount !== null ? amount - secondAmount : amount
+
+  if (cashPortion <= 0) return null
+
+  const quickValues = getQuickValues(cashPortion)
+  const isInsufficient = amountReceived !== null && amountReceived < cashPortion
 
   return (
     <div className="rounded-xl bg-[#1a0b2e] border border-[#2d1550] p-4 space-y-4">
-      <p className="text-sm font-medium text-[#9d7bc8]">Valor recebido em dinheiro</p>
+      <p className="text-sm font-medium text-[#9d7bc8]">
+        Valor recebido em dinheiro
+        {secondMethod !== null && (
+          <span className="ml-1 text-xs">
+            (parcela: {formatCurrency(cashPortion)})
+          </span>
+        )}
+      </p>
 
-      {/* Quick value buttons */}
       <div className="flex flex-wrap gap-2">
         {quickValues.map((v) => (
           <button
@@ -33,7 +48,6 @@ export function CashFlow() {
         ))}
       </div>
 
-      {/* Manual input */}
       <div>
         <label htmlFor="amount-received" className="sr-only">
           Valor recebido
@@ -43,26 +57,25 @@ export function CashFlow() {
           type="number"
           inputMode="decimal"
           step="0.01"
-          min={amount}
+          min={cashPortion}
           value={amountReceived ?? ''}
           onChange={(e) => {
             if (e.target.value === '') { setAmountReceived(null); return }
             const val = parseFloat(e.target.value)
             if (!isNaN(val) && val >= 0) setAmountReceived(val)
           }}
-          placeholder={`Mín. ${formatCurrency(amount)}`}
+          placeholder={`Mín. ${formatCurrency(cashPortion)}`}
           className={`w-full px-3 py-2 rounded-lg bg-[#0f0720] border text-white placeholder-[#4a3570] focus:outline-none focus:ring-2 focus:ring-[#4c1e8c] text-lg ${
             isInsufficient ? 'border-red-500' : 'border-[#2d1550]'
           }`}
         />
         {isInsufficient && (
           <p className="text-red-400 text-xs mt-1">
-            Valor insuficiente. Mínimo: {formatCurrency(amount)}
+            Valor insuficiente. Mínimo: {formatCurrency(cashPortion)}
           </p>
         )}
       </div>
 
-      {/* Troco */}
       {change !== null && change >= 0 && (
         <div className="flex items-baseline justify-between">
           <span className="text-sm text-[#9d7bc8]">Troco</span>
