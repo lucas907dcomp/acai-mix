@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { SerialScaleProvider } from '../SerialScaleProvider'
 
 // --- Mock Web Serial API ---
@@ -31,8 +31,10 @@ function makeMockPort(chunks: Uint8Array[]) {
     open: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     setSignals: vi.fn().mockResolvedValue(undefined),
+    getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x0403, usbProductId: 0x6001 }),
     readable: makeReadableStream(chunks),
     addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
   }
 }
 
@@ -41,10 +43,16 @@ beforeEach(() => {
     value: {
       serial: {
         requestPort: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
       },
     },
     writable: true,
   })
+})
+
+afterEach(() => {
+  vi.clearAllTimers()
 })
 
 describe('SerialScaleProvider', () => {
@@ -101,5 +109,21 @@ describe('SerialScaleProvider', () => {
     await expect(provider.connect()).resolves.not.toThrow()
     await new Promise((r) => setTimeout(r, 10))
     expect(onWeight).not.toHaveBeenCalled()
+  })
+
+  it('registra listener de connect no navigator.serial ao instanciar', () => {
+    new SerialScaleProvider()
+    expect(navigator.serial.addEventListener).toHaveBeenCalledWith('connect', expect.any(Function))
+  })
+
+  it('remove listener de connect ao desconectar', async () => {
+    const port = makeMockPort([])
+    ;(navigator.serial.requestPort as ReturnType<typeof vi.fn>).mockResolvedValue(port)
+
+    const provider = new SerialScaleProvider()
+    await provider.connect()
+    await provider.disconnect()
+
+    expect(navigator.serial.removeEventListener).toHaveBeenCalledWith('connect', expect.any(Function))
   })
 })
