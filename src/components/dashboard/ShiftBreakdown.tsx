@@ -80,9 +80,9 @@ interface ShiftBreakdownProps {
 export function ShiftBreakdown({ locationId }: ShiftBreakdownProps) {
   const { data, isLoading } = useShiftHistory(locationId, 10)
 
-  const openShift = data?.find((s) => s.status === 'open')
+  const openShifts = data?.filter((s) => s.status === 'open') ?? []
   const closedShifts = data?.filter((s) => s.status !== 'open') ?? []
-  const sorted = openShift ? [openShift, ...closedShifts] : closedShifts
+  const sorted = [...openShifts, ...closedShifts]
 
   const totals = sorted.reduce(
     (acc, s) => ({

@@ -50,8 +50,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
         // INITIAL_SESSION handled by getSession above
         if (event === 'INITIAL_SESSION') return
-        if (!session) {
+        if (!session || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
           clearAuth()
+          return
+        }
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          const profile = await resolveProfile(session.user.id)
+          if (cancelled) return
+          if (profile) {
+            setAuth(session.user, {
+              id: profile.id,
+              location_id: profile.location_id ?? '',
+              role: profile.role as 'admin' | 'staff',
+              display_name: profile.display_name ?? '',
+              created_at: profile.created_at,
+            })
+          } else {
+            clearAuth()
+          }
         }
       }
     )

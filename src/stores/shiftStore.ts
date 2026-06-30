@@ -42,6 +42,8 @@ export const useShiftStore = create<ShiftState>()(
             .select('*')
             .eq('status', 'open')
             .eq('location_id', locationId)
+            .order('opened_at', { ascending: false })
+            .limit(1)
             .maybeSingle()
 
           if (error) throw error
