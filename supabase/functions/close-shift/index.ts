@@ -53,8 +53,10 @@ async function runCloseShift(
       sales.filter((r) => r.payment_method === 'cash').reduce((s, r) => s + r.amount, 0)
     )
 
-    // .eq('status', 'open') on update = idempotency guard
-    const { error: closeError } = await supabase
+    // .select() é obrigatório: sem ele, UPDATE com 0 linhas afetadas retorna
+    // error: null — chamadas paralelas do cron passariam no guard e cada uma
+    // abriria um turno novo, criando duplicatas.
+    const { data: closed, error: closeError } = await supabase
       .from('shifts')
       .update({
         status: 'closed',
@@ -68,11 +70,15 @@ async function runCloseShift(
       })
       .eq('id', shift.id)
       .eq('status', 'open')
+      .select('id')
 
     if (closeError) {
       console.error(`Error closing shift ${shift.id}:`, closeError.message)
       continue
     }
+
+    // Outra chamada paralela já fechou este turno — não abrir duplicata
+    if (!closed || closed.length === 0) continue
 
     closedCount++
 
