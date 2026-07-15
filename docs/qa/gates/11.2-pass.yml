@@ -1,0 +1,25 @@
+storyId: "11.2"
+story_title: "RLS/Policies para Owner + Fechamento de Brechas Herdadas"
+verdict: PASS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  AC1-AC6 verificados via inspeção direta de pg_policies (qual/with_check
+  completos) e reexecução do smoke test. T2 (DEBT-EPIC11-01) tratado com
+  rigor por toda a cadeia dev->data-engineer->qa: resultado bruto
+  count=0 foi investigado (tabela shifts/sales vazia), e o vazamento
+  confirmado presente via verificação empírica reproduzida
+  independentemente 2x. Ambiente confirmado limpo ao final.
+issues: []
+checks:
+  code_review: PASS
+  unit_tests: PASS
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: N/A
+  security: PASS
+  documentation: PASS
+notes:
+  - "CodeRabbit self-healing não executou (mesma limitação de ambiente das Stories 11.0/11.1). Fallback de revisão manual usado."
+  - "Recomendação não-bloqueante registrada pelo @data-engineer: enriquecer o seed sintético com dados persistidos de shifts/sales para tornar T2 auto-verificável sem inserção manual ad-hoc."
