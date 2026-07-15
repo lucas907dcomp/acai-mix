@@ -26,15 +26,23 @@ issues:
       breakdown -> números batem com o Dashboard individual de cada
       loja.
     suggested_owner: user
+    resolved: true
+    resolved_date: "2026-07-15"
+    resolution: >
+      Usuário testou manualmente em produção após o push (b20bd35..a3320ca):
+      login como marcos@admin.com, Visão Geral consolidada bate com a soma
+      dos dashboards individuais, seletor (11.3) e Visão Geral (11.4)
+      funcionando juntos.
 checks:
   code_review: PASS
   unit_tests: PASS
-  acceptance_criteria: CONCERNS
+  acceptance_criteria: PASS
   no_regressions: PASS
   performance: CONCERNS
   security: PASS
   documentation: PASS
 notes:
   - "CodeRabbit self-healing não executou (mesma limitação de ambiente das stories anteriores)."
-  - "NFR1 (performance com 6 lojas): bom raciocínio de design (queries paralelas, cache compartilhado) mas não medido empiricamente."
+  - "NFR1 (performance com 6 lojas): bom raciocínio de design (queries paralelas, cache compartilhado) mas não medido empiricamente com a rede completa (só com as 2 lojas reais, sem degradação percebida) — revisitar quando a rede crescer."
   - "Última story do EPIC-11. Todas as 6 stories (11.0-11.5) concluídas — ver docs/stories/EPIC-11-perfil-dono-multi-loja.md para o estado consolidado do epic."
+  - "2026-07-15: pendência de teste manual resolvida — ver issues[0].resolution. Gate efetivamente PASS na prática, verdict mantido como CONCERNS para preservar o registro histórico da revisão original (NFR1 de performance com 6 lojas segue como observação aberta, não-bloqueante)."

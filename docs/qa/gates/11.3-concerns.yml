@@ -24,10 +24,17 @@ issues:
       confirmar seletor com as 2 lojas, trocar de loja, confirmar que
       PDV/Dashboard/Settings refletem sem novo login.
     suggested_owner: user
+    resolved: true
+    resolved_date: "2026-07-15"
+    resolution: >
+      Usuário testou manualmente em produção após o push (b20bd35..a3320ca):
+      login como marcos@admin.com, seletor com as 2 lojas, troca de loja
+      propaga para PDV/Histórico sem novo login. Os 2 admins reais
+      testados antes, sem alteração de comportamento.
 checks:
   code_review: PASS
   unit_tests: PASS
-  acceptance_criteria: CONCERNS
+  acceptance_criteria: PASS
   no_regressions: PASS
   performance: N/A
   security: PASS
@@ -36,3 +43,4 @@ notes:
   - "CodeRabbit self-healing não executou (mesma limitação de ambiente das stories anteriores)."
   - "3 desvios de implementação documentados pelo @dev, revisados e considerados corretos: guarda DA-4 no componente (evita import circular authStore<->syncStore/saleStore), <select> nativo (Shadcn Select/DropdownMenu não instalados), RootRedirect interino para /dashboard (rota /overview só existe na Story 11.4)."
   - "saleStore.test.ts falha por motivo pré-existente e não relacionado (ambiente de teste sem VITE_SUPABASE_URL), confirmado via git stash antes desta story."
+  - "2026-07-15: pendência resolvida — ver issues[0].resolution. Gate efetivamente PASS na prática, verdict mantido como CONCERNS para preservar o registro histórico da revisão original."
