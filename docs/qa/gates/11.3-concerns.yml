@@ -1,0 +1,38 @@
+storyId: "11.3"
+story_title: "Seletor de Loja no Header (Owner Only)"
+verdict: CONCERNS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  Código e testes verificados de forma independente (tsc/lint/vitest
+  reexecutados, 16 hooks reconferidos via git diff, achado adicional
+  confirmando DA-1/DA-3 em POS.tsx). Não-bloqueante para admin/staff
+  (zero risco confirmado). CONCERNS por uma única pendência: o teste
+  manual end-to-end do owner real (login -> seletor -> troca de loja
+  -> telas refletem) ainda não foi executado por ninguém nesta sessão
+  — nem @dev nem @qa têm credenciais de produção.
+issues:
+  - severity: medium
+    category: testing
+    description: >
+      AC3 (telas refletem a troca de loja) tem forte evidência de
+      código mas não foi verificado end-to-end com o owner real em
+      produção.
+    recommendation: >
+      Usuário testar manualmente: login como marcos@admin.com,
+      confirmar seletor com as 2 lojas, trocar de loja, confirmar que
+      PDV/Dashboard/Settings refletem sem novo login.
+    suggested_owner: user
+checks:
+  code_review: PASS
+  unit_tests: PASS
+  acceptance_criteria: CONCERNS
+  no_regressions: PASS
+  performance: N/A
+  security: PASS
+  documentation: PASS
+notes:
+  - "CodeRabbit self-healing não executou (mesma limitação de ambiente das stories anteriores)."
+  - "3 desvios de implementação documentados pelo @dev, revisados e considerados corretos: guarda DA-4 no componente (evita import circular authStore<->syncStore/saleStore), <select> nativo (Shadcn Select/DropdownMenu não instalados), RootRedirect interino para /dashboard (rota /overview só existe na Story 11.4)."
+  - "saleStore.test.ts falha por motivo pré-existente e não relacionado (ambiente de teste sem VITE_SUPABASE_URL), confirmado via git stash antes desta story."
