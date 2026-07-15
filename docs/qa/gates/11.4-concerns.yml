@@ -1,0 +1,40 @@
+storyId: "11.4"
+story_title: "Tela \"Visão Geral\" — Consolidado Multi-Loja"
+verdict: CONCERNS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  AC1/AC2/AC4/AC5 verificados com confiança (código + testes +
+  reprodução independente). AC3 (3ª loja sem deploy) verificado a
+  nível de dados/query, reproduzido pelo QA. Confirmado via git diff
+  que Dashboard.tsx/SalesChart.tsx/ShiftBreakdown.tsx não foram
+  tocados — zero risco de regressão para admin/staff. CONCERNS por
+  uma pendência: nenhum teste manual end-to-end real (owner navegando
+  de fato, 11.3 + 11.4 juntas) foi feito nesta sessão — nem @dev nem
+  @qa têm credenciais de produção.
+issues:
+  - severity: medium
+    category: testing
+    description: >
+      EPIC-11 completo (seletor de loja + Visão Geral) nunca foi
+      observado por um humano num navegador real com o owner
+      (marcos@admin.com).
+    recommendation: >
+      Usuário testar manualmente o fluxo combinado: login -> seletor
+      aparece -> trocar de loja -> /overview mostra consolidado e
+      breakdown -> números batem com o Dashboard individual de cada
+      loja.
+    suggested_owner: user
+checks:
+  code_review: PASS
+  unit_tests: PASS
+  acceptance_criteria: CONCERNS
+  no_regressions: PASS
+  performance: CONCERNS
+  security: PASS
+  documentation: PASS
+notes:
+  - "CodeRabbit self-healing não executou (mesma limitação de ambiente das stories anteriores)."
+  - "NFR1 (performance com 6 lojas): bom raciocínio de design (queries paralelas, cache compartilhado) mas não medido empiricamente."
+  - "Última story do EPIC-11. Todas as 6 stories (11.0-11.5) concluídas — ver docs/stories/EPIC-11-perfil-dono-multi-loja.md para o estado consolidado do epic."
