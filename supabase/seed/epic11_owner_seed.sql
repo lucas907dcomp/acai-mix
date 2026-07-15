@@ -25,9 +25,14 @@
 -- ============================================================
 
 -- PREENCHER ANTES DE RODAR (nunca deixar os placeholders abaixo):
-\set owner_user_id  'PREENCHER-UUID-DO-OWNER-CRIADO-VIA-DASHBOARD'
-\set loja1_real     'PREENCHER-LOCATION-ID-REAL-1'
-\set loja2_real     'PREENCHER-LOCATION-ID-REAL-2'
+-- Confirmado pelo usuário em 2026-07-15: marcos@admin.com, já criado
+-- via Dashboard, UUID abaixo. AçaiMix / AçaiMix Barra são os 2
+-- location_id reais confirmados (SELECT id, name FROM locations).
+\set owner_user_id  '4e95e64f-f00b-47b1-a5db-34d80857d0b4'
+-- AçaiMix (loja 1):
+\set loja1_real     'a0000000-0000-0000-0000-000000000001'
+-- AçaiMix Barra (loja 2):
+\set loja2_real     '5e4b73af-2ff8-4fdc-87d9-8f0d0ba98f6f'
 \set owner_display_name 'Dono'
 
 -- ------------------------------------------------------------
