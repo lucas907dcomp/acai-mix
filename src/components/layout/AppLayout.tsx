@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart2, History, LogOut, Menu, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
+import { BarChart2, History, LayoutGrid, LogOut, Menu, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
@@ -16,6 +16,13 @@ const ADMIN_LINKS = [
   { to: '/sales-history', label: 'Histórico', icon: History },
   { to: '/employee-consumption', label: 'Consumo Func.', icon: UtensilsCrossed },
   { to: '/admin/settings', label: 'Configurações', icon: Settings },
+]
+
+// EPIC-11 / Story 11.4 — owner ganha "Visão Geral" além dos links de admin
+// (opera como admin na loja ativa, mais a visão consolidada multi-loja).
+const OWNER_LINKS = [
+  { to: '/overview', label: 'Visão Geral', icon: LayoutGrid },
+  ...ADMIN_LINKS,
 ]
 
 const STAFF_LINKS = [
@@ -40,7 +47,7 @@ export function AppLayout() {
   }, [])
 
   const links =
-    profile?.role === 'admin' || profile?.role === 'owner' ? ADMIN_LINKS : STAFF_LINKS
+    profile?.role === 'owner' ? OWNER_LINKS : profile?.role === 'admin' ? ADMIN_LINKS : STAFF_LINKS
 
   async function handleLogout() {
     await supabase.auth.signOut()

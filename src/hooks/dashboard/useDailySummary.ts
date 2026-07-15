@@ -17,21 +17,30 @@ function getDateRange(period: DatePeriod): { from: string; to: string } {
   return { from: format(subDays(today, 29), 'yyyy-MM-dd'), to: todayStr }
 }
 
+// Extraído de useDailySummary para reuso em useOwnerOverview (EPIC-11 /
+// Story 11.4) — mesma query, mesma view (daily_summary), sem duplicar
+// lógica de agregação. useDailySummary continua com o mesmo
+// comportamento/assinatura de sempre, só delega para esta função.
+export async function fetchDailySummaryRange(
+  locationId: string,
+  period: DatePeriod
+): Promise<DailySummaryRow[]> {
+  const { from, to } = getDateRange(period)
+  const { data, error } = await supabase
+    .from('daily_summary')
+    .select('*')
+    .eq('location_id', locationId)
+    .gte('sale_date', from)
+    .lte('sale_date', to)
+    .order('sale_date', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as DailySummaryRow[]
+}
+
 export function useDailySummary(locationId: string, period: DatePeriod) {
   return useQuery<DailySummaryRow[]>({
     queryKey: ['daily-summary', locationId, period],
-    queryFn: async () => {
-      const { from, to } = getDateRange(period)
-      const { data, error } = await supabase
-        .from('daily_summary')
-        .select('*')
-        .eq('location_id', locationId)
-        .gte('sale_date', from)
-        .lte('sale_date', to)
-        .order('sale_date', { ascending: true })
-      if (error) throw error
-      return (data ?? []) as DailySummaryRow[]
-    },
+    queryFn: () => fetchDailySummaryRange(locationId, period),
     refetchInterval: 45_000,
     staleTime: 30_000,
     enabled: !!locationId,

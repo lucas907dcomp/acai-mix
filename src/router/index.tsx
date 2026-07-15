@@ -27,6 +27,18 @@ export const router = createBrowserRouter([
             lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
           },
           {
+            // EPIC-11 / Story 11.4 — estrito: admin/staff não acessam,
+            // nem por URL direta (satisfiesRequiredRole não amplia
+            // "owner" para admin/staff, só o inverso).
+            element: <ProtectedRoute requiredRole="owner" />,
+            children: [
+              {
+                path: '/overview',
+                lazy: () => import('@/pages/OwnerOverview').then((m) => ({ Component: m.default })),
+              },
+            ],
+          },
+          {
             element: <ProtectedRoute requiredRole="admin" />,
             children: [
               {
