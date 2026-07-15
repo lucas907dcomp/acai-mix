@@ -1,0 +1,28 @@
+storyId: "11.5"
+story_title: "Seed — Usuário Owner Vinculado às 2 Lojas em Produção"
+verdict: PASS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  AC1-AC5 atendidos. Riscos R1-R4 documentados na story confirmados
+  mitigados. Achado emergente (migration nunca aplicada em produção,
+  fora do escopo previsto por qualquer story do epic) foi corretamente
+  escalado ao usuário antes de qualquer ação, não assumido
+  unilateralmente. LIMITAÇÃO REGISTRADA: verificação de produção
+  depende do relato direto do usuário nesta sessão — não há
+  credenciais de produção disponíveis para reconferência independente
+  via query, diferente das Stories 11.0-11.2 (ambiente local).
+issues: []
+checks:
+  code_review: N/A
+  unit_tests: PASS # smoke test manual dos 2 admins reais, relatado pelo usuário
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: N/A
+  security: PASS
+  documentation: PASS
+notes:
+  - "CodeRabbit self-healing não executou (mesma limitação de ambiente das stories anteriores)."
+  - "Nit não-bloqueante: File List da story tinha uma linha duplicada (cosmético, sinalizado para @dev limpar)."
+  - "Recomendação para o epic (fora do escopo desta story): considerar registrar explicitamente, em alguma story futura ou no processo do time, o passo 'aplicar migrations pendentes em produção' — não estava previsto em nenhuma story do EPIC-11 e só foi descoberto na prática."
