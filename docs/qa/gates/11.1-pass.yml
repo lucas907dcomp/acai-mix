@@ -1,0 +1,23 @@
+storyId: "11.1"
+story_title: "Modelo de Papéis e Vínculo Usuário↔Loja (N:N)"
+verdict: PASS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  AC1-AC8 verificados. Migration e evidência de teste passaram por três
+  verificações independentes (dev, data-engineer, qa) com resultado
+  idêntico nos 16 casos do smoke test. tsc/lint reconferidos pela QA,
+  zero erros. Ausência de hardcoding de loja confirmada via grep.
+  DoD "review de @data-engineer" satisfeito antes deste gate.
+issues: []
+checks:
+  code_review: PASS
+  unit_tests: PASS # smoke test SQL, reexecutado 3x de forma independente
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: N/A
+  security: PASS
+  documentation: PASS
+notes:
+  - "CodeRabbit self-healing não executou (mesma limitação de ambiente da Story 11.0 — WSL sem distro Linux de usuário). Fallback de revisão manual usado."
