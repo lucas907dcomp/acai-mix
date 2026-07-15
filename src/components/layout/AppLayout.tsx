@@ -7,6 +7,7 @@ import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useLocationData } from '@/hooks/useLocationData'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
+import { LocationSelector } from '@/components/layout/LocationSelector'
 import { cn } from '@/lib/utils'
 
 const ADMIN_LINKS = [
@@ -38,7 +39,8 @@ export function AppLayout() {
     useSyncStore.getState().startClockWatch()
   }, [])
 
-  const links = profile?.role === 'admin' ? ADMIN_LINKS : STAFF_LINKS
+  const links =
+    profile?.role === 'admin' || profile?.role === 'owner' ? ADMIN_LINKS : STAFF_LINKS
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -79,6 +81,8 @@ export function AppLayout() {
           {location?.name ?? 'AçaiMix'}
         </span>
       </div>
+
+      {profile?.role === 'owner' && <LocationSelector />}
 
       <nav className="flex-1 px-4 py-4 space-y-1" aria-label="Navegação principal">
         {navItems}

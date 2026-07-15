@@ -15,6 +15,11 @@ export default function RootRedirect() {
   }
 
   if (!user) return <Navigate to="/login" replace />
-  if (profile?.role === 'admin') return <Navigate to="/dashboard" replace />
+  // EPIC-11 / Story 11.3 — owner opera como admin dentro da loja ativa.
+  // TODO(11.4): trocar para '/overview' quando a rota da Visão Geral
+  // existir; até lá, /dashboard é o destino mais próximo do papel dele.
+  if (profile?.role === 'admin' || profile?.role === 'owner') {
+    return <Navigate to="/dashboard" replace />
+  }
   return <Navigate to="/pos" replace />
 }

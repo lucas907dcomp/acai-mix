@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { satisfiesRequiredRole } from '@/router/roleAccess'
 import type { UserRole } from '@/types'
 
 interface ProtectedRouteProps {
@@ -23,7 +24,9 @@ export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />
   }
 
-  if (requiredRole === 'admin' && profile?.role !== 'admin') {
+  // EPIC-11 / Story 11.3 — owner satisfaz qualquer requiredRole (opera
+  // como admin dentro da loja ativa).
+  if (!satisfiesRequiredRole(profile?.role, requiredRole)) {
     return <Navigate to="/pos" replace />
   }
 

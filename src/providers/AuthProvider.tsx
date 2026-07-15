@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { fetchOwnerLocations } from '@/lib/profile'
 
 async function resolveProfile(userId: string) {
   const { data: profile } = await supabase
@@ -27,12 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await resolveProfile(session.user.id)
         if (cancelled) return
         if (profile) {
+          const locations =
+            profile.role === 'owner' ? await fetchOwnerLocations(profile.id) : undefined
           setAuth(session.user, {
             id: profile.id,
             location_id: profile.location_id ?? '',
-            role: profile.role as 'admin' | 'staff',
+            role: profile.role as 'admin' | 'staff' | 'owner',
             display_name: profile.display_name ?? '',
             created_at: profile.created_at,
+            locations,
           })
         } else {
           clearAuth()

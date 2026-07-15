@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { fetchOwnerLocations } from '@/lib/profile'
 
 interface LoginCredentials {
   email: string
@@ -47,15 +48,19 @@ export function useAuth(): UseAuthReturn {
         return
       }
 
+      const locations =
+        profile.role === 'owner' ? await fetchOwnerLocations(profile.id) : undefined
+
       setAuth(authData.user, {
         id: profile.id,
         location_id: profile.location_id ?? '',
-        role: profile.role as 'admin' | 'staff',
+        role: profile.role as 'admin' | 'staff' | 'owner',
         display_name: profile.display_name ?? '',
         created_at: profile.created_at,
+        locations,
       })
 
-      if (profile.role === 'admin') {
+      if (profile.role === 'admin' || profile.role === 'owner') {
         navigate('/dashboard')
       } else {
         navigate('/pos')

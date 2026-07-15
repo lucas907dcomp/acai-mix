@@ -5,7 +5,7 @@ export interface PaymentSplitItem {
   amount: number
 }
 
-export type UserRole = 'admin' | 'staff'
+export type UserRole = 'admin' | 'staff' | 'owner'
 
 export type ShiftStatus = 'open' | 'closed' | 'provisional'
 
@@ -22,10 +22,21 @@ export interface Location {
 
 export interface UserProfile {
   id: string
+  /**
+   * Para `admin`/`staff`: a única loja do usuário, imutável.
+   * Para `owner`: a loja ATIVA no momento (dentro das lojas vinculadas
+   * em `user_locations`) — muda via `switchActiveLocation`, nunca por
+   * UPDATE direto. Ver seção 2.2 do doc de arquitetura do EPIC-11.
+   */
   location_id: string
   role: UserRole
   display_name: string
   created_at: string
+  /**
+   * Lojas vinculadas ao usuário — só populado quando `role === 'owner'`
+   * (EPIC-11 / Story 11.3). `admin`/`staff` sempre têm `undefined` aqui.
+   */
+  locations?: { id: string; name: string }[]
 }
 
 export interface Product {
