@@ -1,0 +1,1 @@
+- [EPIC-10 Context](project-epic10-context.md) — 5 stories do multi-produto/casquinha criadas em 2026-05-26; decisões arquiteturais e ordem de execução

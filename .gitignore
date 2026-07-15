@@ -24,9 +24,16 @@ Thumbs.db
 *.swp
 
 # AIOX Local (AIOX)
-.aiox-core/local/
+.aiox-core/
 .claude/settings.local.json
-.aiox/install-log.txt
+.aiox/
+
+# AI tooling not used in this project (installer residue)
+.antigravity/
+.codex/
+.gemini/
+.kimi/
+.github/agents/
 
 # Vite
 dist-ssr
