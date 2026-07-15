@@ -10,6 +10,13 @@ Este ambiente é **efêmero**. Não é um banco de "staging" persistente para
 gerenciar manualmente — é descartável e reproduzível a qualquer momento.
 Nunca guarde segredos reais nele; use-o apenas para os testes deste epic.
 
+**Observação conhecida (Windows):** o container `supabase_vector_<project_id>`
+(analytics/logs do Studio) entra em crashloop no Windows porque o Docker
+Desktop não expõe o daemon via TCP (`tcp://localhost:2375`) por padrão — o
+próprio `supabase start` avisa isso. Isso é inofensivo para este epic:
+afeta só a aba de Logs do Studio, não o Postgres/Auth/RLS. Não tratar como
+migration quebrada.
+
 ---
 
 ## 1. Pré-requisitos

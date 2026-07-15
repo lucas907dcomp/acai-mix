@@ -1,0 +1,24 @@
+storyId: "11.0"
+story_title: "Ambiente de Teste — Stack Local Supabase + Seed Sintético"
+verdict: PASS
+date: "2026-07-15"
+agent: "@qa"
+reviewer: "Quinn (Test Architect)"
+status_reason: >
+  Todas as 5 ACs verificadas de forma independente (não apenas relato do @dev):
+  schema do EPIC-11 confirmado no Postgres local, contagens do seed
+  reconferidas via SQL direto, login real via GoTrue testado e funcional,
+  seed idempotente e smoke test reprodutível em reexecução. Nenhum segredo
+  real commitado. Nenhum impacto em produção ou em stories subsequentes.
+issues: []
+checks:
+  code_review: PASS
+  unit_tests: N/A # story de infraestrutura de teste — o smoke test É o artefato de teste
+  acceptance_criteria: PASS
+  no_regressions: PASS
+  performance: N/A
+  security: PASS
+  documentation: PASS
+notes:
+  - "Container supabase_vector_<project_id> (analytics) crashloopa no Windows por limitação conhecida do Docker Desktop (daemon não exposto via TCP) — documentado como não-bloqueante em docs/architecture/epic11-ambiente-teste.md."
+  - "CodeRabbit self-healing não executou (dev e QA) — WSL sem distro Linux de usuário instalada, só a distro interna docker-desktop. Fallback de revisão manual documentado usado em ambas as fases, conforme dev-develop-story.md / qa-review-story.md."
