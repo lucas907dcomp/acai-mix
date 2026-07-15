@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -41,34 +36,34 @@ export type Database = {
     Tables: {
       employee_consumptions: {
         Row: {
-          id: string
-          employee_id: string
-          location_id: string
           amount: number
-          description: string | null
           consumed_at: string
-          created_by: string
           created_at: string
+          created_by: string
+          description: string | null
+          employee_id: string
+          id: string
+          location_id: string
         }
         Insert: {
-          id?: string
-          employee_id: string
-          location_id: string
           amount: number
-          description?: string | null
           consumed_at?: string
-          created_by: string
           created_at?: string
+          created_by: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          location_id: string
         }
         Update: {
-          id?: string
-          employee_id?: string
-          location_id?: string
           amount?: number
-          description?: string | null
           consumed_at?: string
-          created_by?: string
           created_at?: string
+          created_by?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          location_id?: string
         }
         Relationships: [
           {
@@ -89,25 +84,25 @@ export type Database = {
       }
       employees: {
         Row: {
+          active: boolean
+          created_at: string
           id: string
           location_id: string
           name: string
-          active: boolean
-          created_at: string
         }
         Insert: {
+          active?: boolean
+          created_at?: string
           id?: string
           location_id: string
           name: string
-          active?: boolean
-          created_at?: string
         }
         Update: {
+          active?: boolean
+          created_at?: string
           id?: string
           location_id?: string
           name?: string
-          active?: boolean
-          created_at?: string
         }
         Relationships: [
           {
@@ -169,6 +164,13 @@ export type Database = {
           product_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales_summary"
+            referencedColumns: ["product_id"]
+          },
           {
             foreignKeyName: "product_price_history_product_id_fkey"
             columns: ["product_id"]
@@ -239,12 +241,12 @@ export type Database = {
           combined_order_name: string | null
           created_at: string
           created_offline: boolean
-          payment_split: Json | null
           has_casquinha: boolean
           id: string
-          is_combined: boolean
+          is_combined: boolean | null
           location_id: string
           payment_method: string
+          payment_split: Json | null
           price_per_gram: number
           product_id: string | null
           quantity: number
@@ -267,10 +269,10 @@ export type Database = {
           created_offline?: boolean
           has_casquinha?: boolean
           id: string
-          is_combined?: boolean
-          payment_split?: Json | null
+          is_combined?: boolean | null
           location_id: string
           payment_method: string
+          payment_split?: Json | null
           price_per_gram: number
           product_id?: string | null
           quantity?: number
@@ -293,10 +295,10 @@ export type Database = {
           created_offline?: boolean
           has_casquinha?: boolean
           id?: string
-          is_combined?: boolean
-          payment_split?: Json | null
+          is_combined?: boolean | null
           location_id?: string
           payment_method?: string
+          payment_split?: Json | null
           price_per_gram?: number
           product_id?: string | null
           quantity?: number
@@ -319,15 +321,15 @@ export type Database = {
             foreignKeyName: "sales_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
+            referencedRelation: "product_sales_summary"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "sales_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "product_sales_summary"
-            referencedColumns: ["product_id"]
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sales_shift_id_fkey"
@@ -401,6 +403,32 @@ export type Database = {
           },
         ]
       }
+      user_locations: {
+        Row: {
+          created_at: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           created_at: string
@@ -457,6 +485,26 @@ export type Database = {
           },
         ]
       }
+      product_sales_summary: {
+        Row: {
+          location_id: string | null
+          product_id: string | null
+          product_name: string | null
+          product_type: string | null
+          total_amount: number | null
+          total_quantity: number | null
+          total_sales: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_summary: {
         Row: {
           avg_ticket: number | null
@@ -484,32 +532,18 @@ export type Database = {
           },
         ]
       }
-      product_sales_summary: {
-        Row: {
-          location_id: string | null
-          product_id: string | null
-          product_name: string | null
-          product_type: string | null
-          total_amount: number | null
-          total_quantity: number | null
-          total_sales: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       can_cancel_sale: { Args: { p_sale_id: string }; Returns: boolean }
       fn_is_admin_of_location: { Args: { loc_id: string }; Returns: boolean }
       get_my_location_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      is_owner: { Args: never; Returns: boolean }
+      is_owner_of_location: { Args: { loc_id: string }; Returns: boolean }
+      switch_active_location: {
+        Args: { p_location_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -645,3 +679,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
