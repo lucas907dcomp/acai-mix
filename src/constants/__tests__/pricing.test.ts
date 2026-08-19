@@ -36,3 +36,32 @@ describe('calcSaleAmount', () => {
     expect(calcSaleAmount(150, 0.065, true)).toBe(10.75)
   })
 })
+
+// --- preço da casquinha por loja (19/08/2026) ---
+//
+// Nasceu fixo em R$ 1,00 com uma loja só. A AçaiMix Barra cobra R$ 2,00.
+// Como este número entra no valor cobrado do cliente, as duas pontas ficam
+// fixadas em teste: o default não pode mudar sozinho, e o preço da loja tem
+// que chegar até o total.
+describe('calcSaleAmount com preço de casquinha por loja', () => {
+  it('sem o 4º argumento, cobra R$ 1,00 — como era antes', () => {
+    expect(calcSaleAmount(300, 0.07, true)).toBe(22.0)
+  })
+
+  it('loja de R$ 2,00: 300g × R$0,07/g + R$2,00 = R$23,00', () => {
+    expect(calcSaleAmount(300, 0.07, true, 2.0)).toBe(23.0)
+  })
+
+  it('o preço da casquinha não afeta venda sem casquinha', () => {
+    expect(calcSaleAmount(300, 0.07, false, 2.0)).toBe(21.0)
+    expect(calcSaleAmount(300, 0.07, false, 1.0)).toBe(21.0)
+  })
+
+  it('peso 0 com casquinha de R$ 2,00 = R$ 2,00', () => {
+    expect(calcSaleAmount(0, 0.07, true, 2.0)).toBe(2.0)
+  })
+
+  it('preço quebrado não estraga o arredondamento (345g × 0,065 + 2,50)', () => {
+    expect(calcSaleAmount(345, 0.065, true, 2.5)).toBe(24.93)
+  })
+})
