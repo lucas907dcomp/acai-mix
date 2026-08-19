@@ -11,9 +11,16 @@ export function WeightDisplay() {
   const weight = useScaleStore((s) => s.currentWeightGrams)
   const providerType = useScaleStore((s) => s.providerType)
   const provider = useScaleStore((s) => s.provider)
+  const manualOverride = useScaleStore((s) => s.manualOverride)
 
   if (providerType === 'manual') {
     return <ManualWeightInput provider={provider as ManualInputProvider} />
+  }
+
+  // Lançamento manual pontual: mesma tela de digitar valor, mas a balança
+  // segue conectada e lendo por trás. Sem provider — não há o que empurrar.
+  if (manualOverride) {
+    return <ManualWeightInput />
   }
 
   return (

@@ -47,30 +47,13 @@ async function runCloseShift(
   const newShiftNumber = new Date().getUTCHours() >= 12 ? 2 : 1
 
   for (const shift of openShifts) {
-    const { data: salesData, error: salesError } = await supabase
-      .from('sales')
-      .select('amount, payment_method')
-      .eq('shift_id', shift.id)
-
-    if (salesError) {
-      console.error(`Error fetching sales for shift ${shift.id}:`, salesError.message)
-      continue
-    }
-
-    const sales = salesData ?? []
-    const round = (n: number) => Math.round(n * 100) / 100
-    const totalSales = round(sales.reduce((s, r) => s + r.amount, 0))
-    const totalPix = round(
-      sales.filter((r) => r.payment_method === 'pix').reduce((s, r) => s + r.amount, 0)
-    )
-    const totalCard = round(
-      sales
-        .filter((r) => r.payment_method === 'credit' || r.payment_method === 'debit')
-        .reduce((s, r) => s + r.amount, 0)
-    )
-    const totalCash = round(
-      sales.filter((r) => r.payment_method === 'cash').reduce((s, r) => s + r.amount, 0)
-    )
+    // Os totais NÃO são recalculados aqui de propósito.
+    //
+    // Antes esta função somava as vendas do turno e sobrescrevia os campos —
+    // sem filtrar canceladas, o que fazia toda venda cancelada voltar a contar
+    // no fechamento. O trigger em `sales` já mantém os totais corretos a cada
+    // insert, update e delete, ignorando canceladas. Somar de novo aqui só
+    // pode divergir do que o trigger apurou.
 
     // .select() é obrigatório: sem ele, UPDATE com 0 linhas afetadas retorna
     // error: null — chamadas paralelas do cron passariam no guard e cada uma
@@ -81,11 +64,6 @@ async function runCloseShift(
         status: 'closed',
         closed_at: now,
         closed_by: 'system',
-        total_sales: totalSales,
-        total_pix: totalPix,
-        total_card: totalCard,
-        total_cash: totalCash,
-        sale_count: sales.length,
       })
       .eq('id', shift.id)
       .eq('status', 'open')

@@ -6,12 +6,19 @@ export function ScaleConnectionStatus() {
   const isConnected = useScaleStore((s) => s.isConnected)
   const providerType = useScaleStore((s) => s.providerType)
   const openManualDialog = useScaleStore((s) => s.openManualDialog)
+  const manualOverride = useScaleStore((s) => s.manualOverride)
+  const setManualOverride = useScaleStore((s) => s.setManualOverride)
   const { reconnectSerial } = useReconnectSerial()
   const [isConnecting, setIsConnecting] = useState(false)
 
   const badge =
     providerType === 'manual'
       ? { label: 'Modo Manual', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' }
+      : manualOverride
+      ? {
+          label: 'Digitando valor',
+          color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+        }
       : isConnected
         ? { label: 'Balança Conectada', color: 'bg-green-500/20 text-green-400 border-green-500/30' }
         : { label: 'Balança Desconectada', color: 'bg-red-500/20 text-red-400 border-red-500/30' }
@@ -56,6 +63,19 @@ export function ScaleConnectionStatus() {
           className="text-xs text-[#9d7bc8] hover:text-white underline transition-colors"
         >
           Digitar manualmente
+        </button>
+      )}
+
+      {/* Lançamento manual pontual, sem largar a balança. Para a venda que não
+          dá para pesar: produto já embalado, balança ocupada, item sem peso.
+          A balança continua conectada e lendo por trás — ao terminar a venda,
+          a tela volta sozinha a mostrar o peso. */}
+      {isConnected && providerType === 'serial' && (
+        <button
+          onClick={() => setManualOverride(!manualOverride)}
+          className="text-xs text-[#9d7bc8] hover:text-white underline transition-colors"
+        >
+          {manualOverride ? 'Voltar para a balança' : 'Digitar valor desta venda'}
         </button>
       )}
     </div>

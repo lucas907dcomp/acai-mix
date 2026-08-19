@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useAuthStore } from '@/stores/authStore'
 import { useCancelSale } from '@/hooks/useCancelSale'
+import { useEditSaleAmount } from '@/hooks/useEditSaleAmount'
 import type { SaleWithProduct } from '@/types'
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -33,6 +34,26 @@ export function SalesHistoryTable({ sales, isLoading }: SalesHistoryTableProps) 
   const [confirmSale, setConfirmSale] = useState<SaleWithProduct | null>(null)
   const profile = useAuthStore((s) => s.profile)
   const { mutate: cancelSale, isPending } = useCancelSale()
+
+  // Edição só existe para dinheiro: pix e cartão têm comprovante do outro
+  // lado, e mudar o valor aqui faria o sistema divergir do extrato.
+  const [editSale, setEditSale] = useState<SaleWithProduct | null>(null)
+  const [novoValor, setNovoValor] = useState('')
+  const { mutate: editarValor, isPending: editando } = useEditSaleAmount()
+
+  function abrirEdicao(sale: SaleWithProduct) {
+    setEditSale(sale)
+    setNovoValor(sale.amount.toFixed(2).replace('.', ','))
+  }
+
+  function handleConfirmEdit() {
+    if (!editSale) return
+    const valor = Number(novoValor.replace(',', '.'))
+    editarValor(
+      { sale: editSale, newAmount: valor },
+      { onSuccess: () => setEditSale(null) },
+    )
+  }
 
   function handleConfirm() {
     if (!confirmSale || !profile) return
@@ -134,12 +155,22 @@ export function SalesHistoryTable({ sales, isLoading }: SalesHistoryTableProps) 
                   </td>
                   <td className="px-4 py-3">
                     {!isCancelled && (
-                      <button
-                        onClick={() => setConfirmSale(sale)}
-                        className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
-                      >
-                        Cancelar
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {sale.payment_method === 'cash' && (
+                          <button
+                            onClick={() => abrirEdicao(sale)}
+                            className="text-xs text-[#9d7bc8] hover:text-white transition-colors"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setConfirmSale(sale)}
+                          className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -148,6 +179,56 @@ export function SalesHistoryTable({ sales, isLoading }: SalesHistoryTableProps) 
           </tbody>
         </table>
       </div>
+
+      <Dialog open={!!editSale} onOpenChange={(open) => { if (!open) setEditSale(null) }}>
+        <DialogContent className="bg-[#1a0b2e] border-[#2d1550] text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Editar valor</DialogTitle>
+          </DialogHeader>
+          {editSale && (
+            <div className="space-y-3 py-1">
+              <div className="rounded-lg bg-[#0f0720] border border-[#2d1550] p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-[#9d7bc8]">Valor atual</span>
+                  <span className="text-white font-medium">{fmt.format(editSale.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#9d7bc8]">Produto</span>
+                  <span className="text-white">{editSale.products?.name ?? '—'}</span>
+                </div>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-sm text-[#9d7bc8]">Novo valor (R$)</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={novoValor}
+                  onChange={(e) => setNovoValor(e.target.value)}
+                  autoFocus
+                  className="w-full h-11 rounded-lg bg-[#0f0720] border border-[#2d1550] px-3 text-white text-lg tabular-nums focus:outline-none focus:border-[#9d7bc8]"
+                />
+              </label>
+              <p className="text-xs text-[#9d7bc8]">
+                O total do turno se ajusta sozinho.
+              </p>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <DialogClose asChild>
+              <button className="px-4 py-2 text-sm text-[#9d7bc8] hover:text-white rounded-lg hover:bg-[#2d1550] transition-colors">
+                Voltar
+              </button>
+            </DialogClose>
+            <button
+              onClick={handleConfirmEdit}
+              disabled={editando || !novoValor.trim()}
+              className="px-4 py-2 text-sm bg-[#2d1550] text-white hover:bg-[#3d1d6b] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {editando ? 'Salvando...' : 'Salvar valor'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!confirmSale} onOpenChange={(open) => { if (!open) setConfirmSale(null) }}>
         <DialogContent className="bg-[#1a0b2e] border-[#2d1550] text-white max-w-sm">
