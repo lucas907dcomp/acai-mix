@@ -3,6 +3,7 @@ import { MockScaleProvider } from '@/providers/scale/MockScaleProvider'
 import { SerialScaleProvider } from '@/providers/scale/SerialScaleProvider'
 import { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 import { useScaleStore } from '@/stores/scaleStore'
+import { useScaleMode } from '@/hooks/useScaleMode'
 
 export function useScale() {
   const { setProvider, updateWeight, updateConnection } = useScaleStore()
@@ -37,10 +38,13 @@ export function useScale() {
 
 export function useReconnectSerial() {
   const { setProvider, updateWeight, updateConnection, disconnect } = useScaleStore()
+  // Modo vem da loja (locations.scale_mode). Em qualquer falha vem
+  // 'continuous', que é o comportamento de sempre — ver useScaleMode.
+  const scaleMode = useScaleMode()
 
   async function reconnectSerial() {
     await disconnect()
-    const provider = new SerialScaleProvider()
+    const provider = new SerialScaleProvider(scaleMode)
     setProvider(provider)
     provider.onWeight(updateWeight)
     provider.onConnectionChange(updateConnection)
