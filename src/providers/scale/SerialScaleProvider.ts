@@ -1,12 +1,28 @@
 import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 
-// UPX Wind D3 — continuous streaming mode, 9600 8N1
-// Packet: STX (0x02) + 5 ASCII digits + ETX (0x03) = 7 bytes
-// "IIIII" = scale unstable (ignored)
+// Duas balanças, dois jeitos de conversar — mesmo pacote nas duas:
+//
+//   'continuous' — UPX Wind D3 (loja 1): transmite sozinha, sem parar.
+//                  "IIIII" = instável/vazia (parse devolve null e ignora).
+//   'polling'    — Toledo Prix 3 Fit/2 (loja 2): fica MUDA até receber ENQ
+//                  (0x05). Protocolo PRT5/P05A.
+//
+// Packet (idêntico nos dois): STX (0x02) + 5 ASCII digits + ETX (0x03) = 7 bytes
+// 9600 8N1 nos dois casos.
+//
+// Medido na Toledo em 18/08/2026: resposta ao ENQ em ~69ms (28-115ms) e 169
+// leituras seguidas sem uma falha. Perguntar a cada 200ms dá 5 leituras por
+// segundo. O intervalo precisa ficar acima da PIOR latência medida (115ms),
+// senão um ENQ sai antes de a resposta anterior chegar e os pacotes se
+// embaralham no buffer — 200ms deixa 85ms de margem.
+export type ScaleMode = 'continuous' | 'polling'
+
 const BAUD_RATE = 9600
 const PACKET_LENGTH = 7
 const STX = 0x02
 const ETX = 0x03
+const ENQ = 0x05
+const POLL_INTERVAL_MS = 200
 const WATCHDOG_TIMEOUT_MS = 10_000
 const WATCHDOG_INTERVAL_MS = 3_000
 
@@ -23,12 +39,19 @@ export class SerialScaleProvider implements IScaleProvider {
   private storedPortInfo: SerialPortInfo | null = null
   private lastDataTimestamp = 0
   private watchdogTimer: ReturnType<typeof setInterval> | null = null
+  private pollTimer: ReturnType<typeof setInterval> | null = null
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null
 
   private readonly onSerialConnect = (event: SerialConnectionEvent) => {
     void this.handleSerialDeviceReconnect(event)
   }
 
-  constructor() {
+  private readonly mode: ScaleMode
+
+  // Default 'continuous' de propósito: é o comportamento que já roda em
+  // produção. Quem não passa nada continua com a balança de antes.
+  constructor(mode: ScaleMode = 'continuous') {
+    this.mode = mode
     if ('serial' in navigator) {
       navigator.serial.addEventListener('connect', this.onSerialConnect)
     }
@@ -52,6 +75,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.connectionCallbacks.forEach((cb) => cb(true))
     this.startReadLoop()
     this.startWatchdog()
+    this.startPolling()
   }
 
   private async openPort(): Promise<void> {
@@ -75,6 +99,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.isReconnecting = false
     this.readLoopActive = false
     this.stopWatchdog()
+    await this.stopPolling()
     if ('serial' in navigator) {
       navigator.serial.removeEventListener('connect', this.onSerialConnect)
     }
@@ -153,6 +178,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.isReconnecting = true
     this.readLoopActive = false
     this.stopWatchdog()
+    void this.stopPolling()
     this.connectionCallbacks.forEach((cb) => cb(false))
     console.warn('[Scale] Balança desconectada, aguardando reconexão...')
     void this.reconnectLoop()
@@ -175,6 +201,7 @@ export class SerialScaleProvider implements IScaleProvider {
         this.connectionCallbacks.forEach((cb) => cb(true))
         this.startReadLoop()
         this.startWatchdog()
+        this.startPolling()
         return
       } catch { /* port still unavailable, keep trying */ }
     }
@@ -206,8 +233,64 @@ export class SerialScaleProvider implements IScaleProvider {
       this.connectionCallbacks.forEach((cb) => cb(true))
       this.startReadLoop()
       this.startWatchdog()
+      this.startPolling()
     } catch (err) {
       console.error('[Scale] Falhou ao reabrir após reconexão USB:', err)
+    }
+  }
+
+  // --- Polling (só no modo 'polling') ---------------------------------------
+  //
+  // A Toledo não fala sozinha: para cada peso é preciso mandar um ENQ e ler a
+  // resposta. Em 'continuous' nada disto roda e a porta nunca é escrita — é
+  // por isso que a loja que já está em produção não sente esta mudança.
+
+  private startPolling(): void {
+    if (this.mode !== 'polling') return
+    if (this.pollTimer !== null) return
+    // Porta sem writable acontece em teste (mock) e em navegador sem suporte:
+    // melhor seguir só lendo do que estourar e derrubar a conexão inteira.
+    if (!this.port?.writable) {
+      console.warn('[Scale] Modo polling pedido, mas a porta não é gravável.')
+      return
+    }
+
+    this.writer = this.port.writable.getWriter()
+    this.pollTimer = setInterval(() => {
+      void this.sendEnq()
+    }, POLL_INTERVAL_MS)
+    void this.sendEnq() // primeiro peso sem esperar um ciclo inteiro
+  }
+
+  private async sendEnq(): Promise<void> {
+    if (!this.writer || !this.readLoopActive) return
+    try {
+      await this.writer.write(new Uint8Array([ENQ]))
+    } catch (err) {
+      // Escrever numa porta que caiu estoura aqui. O readLoop e o watchdog já
+      // cuidam da reconexão, então aqui basta parar de insistir.
+      console.warn('[Scale] Falha ao enviar ENQ:', err)
+      void this.stopPolling()
+    }
+  }
+
+  private async stopPolling(): Promise<void> {
+    if (this.pollTimer !== null) {
+      clearInterval(this.pollTimer)
+      this.pollTimer = null
+    }
+    if (this.writer) {
+      try {
+        await this.writer.close()
+      } catch {
+        /* a porta pode já ter sumido */
+      }
+      try {
+        this.writer.releaseLock()
+      } catch {
+        /* writer já liberado */
+      }
+      this.writer = null
     }
   }
 
