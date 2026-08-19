@@ -20,9 +20,42 @@ interface ShiftState {
   stopPolling: () => void
 }
 
-function getShiftNumber(): 1 | 2 {
+/** Hora de troca usada quando a loja não diz a sua — o valor de sempre. */
+const HORA_TROCA_PADRAO = 16
+
+export function getShiftNumber(horaTroca: number = HORA_TROCA_PADRAO): 1 | 2 {
   const hour = new Date().getHours()
-  return hour < 16 ? 1 : 2
+  return hour < horaTroca ? 1 : 2
+}
+
+/**
+ * Hora em que ESTA loja troca de turno (locations.shift_change_hour).
+ *
+ * Era 16 fixo aqui dentro, o que valia com uma loja só. A AçaiMix Barra troca
+ * às 15h, e por isso um turno aberto à mão entre 15h e 16h lá nascia como
+ * turno 1 quando já devia ser o 2.
+ *
+ * Qualquer falha cai em 16 — o comportamento anterior. Errar para o lado do
+ * que já funcionava é melhor do que errar para um horário inventado.
+ */
+async function buscarHoraTroca(locationId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('locations')
+      .select('shift_change_hour')
+      .eq('id', locationId)
+      .single()
+
+    if (error) {
+      console.warn('[Shift] Não consegui ler shift_change_hour, usando 16h:', error.message)
+      return HORA_TROCA_PADRAO
+    }
+
+    const hora = (data as { shift_change_hour?: number } | null)?.shift_change_hour
+    return typeof hora === 'number' && hora >= 0 && hora <= 23 ? hora : HORA_TROCA_PADRAO
+  } catch {
+    return HORA_TROCA_PADRAO
+  }
 }
 
 let _pollingInterval: ReturnType<typeof setInterval> | null = null
@@ -59,11 +92,12 @@ export const useShiftStore = create<ShiftState>()(
       openShift: async (locationId, openedBy) => {
         set({ isLoading: true, error: null })
         try {
+          const horaTroca = await buscarHoraTroca(locationId)
           const { data, error } = await supabase
             .from('shifts')
             .insert({
               location_id: locationId,
-              shift_number: getShiftNumber(),
+              shift_number: getShiftNumber(horaTroca),
               opened_by: openedBy,
             })
             .select()
