@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/types/supabase'
@@ -56,7 +57,32 @@ interface CombinedOrderState {
   ) => Promise<void>
 }
 
-export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
+/**
+ * Pedidos conjuntos ficam abertos enquanto o cliente ainda está montando o
+ * pedido — às vezes por vários minutos. Antes eles viviam só em memória, e um
+ * F5 (ou um refresh acidental) apagava tudo com o cliente na frente do balcão.
+ *
+ * Guardados em localStorage e não sessionStorage: sessionStorage sobrevive ao
+ * F5 mas morre se o navegador fechar ou o PC reiniciar no meio do expediente —
+ * justamente quando perder o pedido dói mais.
+ *
+ * Como localStorage não expira sozinho, pedidos de dias anteriores são
+ * descartados ao carregar. Sem isso, um pedido esquecido de ontem apareceria
+ * em standby hoje de manhã.
+ */
+const MESMO_DIA = (iso: string): boolean => {
+  const d = new Date(iso)
+  const hoje = new Date()
+  return (
+    d.getFullYear() === hoje.getFullYear() &&
+    d.getMonth() === hoje.getMonth() &&
+    d.getDate() === hoje.getDate()
+  )
+}
+
+export const useCombinedOrderStore = create<CombinedOrderState>()(
+  persist(
+    (set, get) => ({
   orders: [],
   activeOrderId: null,
 
@@ -241,4 +267,26 @@ export const useCombinedOrderStore = create<CombinedOrderState>((set, get) => ({
       }
     }
   },
-}))
+    }),
+    {
+      name: 'acaimix-combined-orders',
+      // Só o que precisa sobreviver ao reload — as ações são recriadas.
+      partialize: (state) => ({
+        orders: state.orders,
+        activeOrderId: state.activeOrderId,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        const doHoje = state.orders.filter((o) => MESMO_DIA(o.createdAt))
+        if (doHoje.length !== state.orders.length) {
+          state.orders = doHoje
+        }
+        // O pedido ativo pode ter sido descartado junto — não deixar a tela
+        // apontando para um pedido que não existe mais.
+        if (state.activeOrderId && !doHoje.some((o) => o.id === state.activeOrderId)) {
+          state.activeOrderId = null
+        }
+      },
+    },
+  ),
+)
