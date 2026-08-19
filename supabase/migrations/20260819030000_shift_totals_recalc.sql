@@ -62,3 +62,8 @@ DROP TRIGGER IF EXISTS trg_update_shift_totals ON sales;
 CREATE TRIGGER trg_update_shift_totals
 AFTER INSERT OR UPDATE OR DELETE ON sales
 FOR EACH ROW EXECUTE FUNCTION update_shift_totals();
+
+-- O cancelamento já era tratado por um trigger próprio, que DECREMENTAVA os
+-- totais. Com o recálculo acima ele virou redundante — e nocivo: os dois
+-- rodando juntos descontavam o valor da venda cancelada duas vezes.
+DROP TRIGGER IF EXISTS trg_update_shift_totals_on_update ON sales;
