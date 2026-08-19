@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useSaleStore, formatCurrency } from '@/stores/saleStore'
-import { CASQUINHA_PRICE } from '@/constants/pricing'
+import { useCasquinhaPrice } from '@/hooks/useCasquinhaPrice'
 
 /**
  * Casquinha add-on toggle for the açaí-by-weight PDV flow.
@@ -23,6 +24,16 @@ import { CASQUINHA_PRICE } from '@/constants/pricing'
  *     PriceDisplay itself).
  */
 export function CasquinhaToggle() {
+  const casquinhaPrice = useCasquinhaPrice()
+  const setCasquinhaPrice = useSaleStore((s) => s.setCasquinhaPrice)
+
+  // O valor cobrado é calculado dentro do saleStore, que não é componente e
+  // não pode usar hook. Este efeito é a ponte: assim que o preço da loja
+  // chega, o store passa a calcular com ele. Antes disso vale R$ 1,00, que é
+  // o preço praticado antes desta coluna existir.
+  useEffect(() => {
+    setCasquinhaPrice(casquinhaPrice)
+  }, [casquinhaPrice, setCasquinhaPrice])
   const capturedWeight = useSaleStore((s) => s.capturedWeightGrams)
   const hasCasquinha = useSaleStore((s) => s.hasCasquinha)
   const toggleCasquinha = useSaleStore((s) => s.toggleCasquinha)
@@ -50,11 +61,11 @@ export function CasquinhaToggle() {
       >
         <div className="flex flex-col">
           <span className="text-base font-semibold text-white">
-            Casquinha +{formatCurrency(CASQUINHA_PRICE)}
+            Casquinha +{formatCurrency(casquinhaPrice)}
           </span>
           <span className="text-xs text-[#9d7bc8]">
             {hasCasquinha
-              ? `+${formatCurrency(CASQUINHA_PRICE)} adicionado ao total`
+              ? `+${formatCurrency(casquinhaPrice)} adicionado ao total`
               : 'Toque para adicionar ao pedido'}
           </span>
         </div>

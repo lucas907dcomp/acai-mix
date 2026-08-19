@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
-import { calcSaleAmount } from '@/constants/pricing'
+import { calcSaleAmount, CASQUINHA_PRICE } from '@/constants/pricing'
 import type { PaymentMethod, PaymentSplitItem, Sale } from '@/types'
 
 export function formatCurrency(value: number): string {
@@ -37,6 +37,8 @@ interface SaleState {
   pricePerGram: number | null
   amount: number | null
   hasCasquinha: boolean
+  /** Preço da casquinha desta loja. Default = o valor de sempre (R$ 1,00). */
+  casquinhaPrice: number
   paymentMethod: PaymentMethod | null
   amountReceived: number | null
   change: number | null
@@ -49,6 +51,7 @@ interface SaleState {
   captureWeight: (grams: number, pricePerGram: number) => void
   captureAmount: (amount: number, pricePerGram: number) => void
   toggleCasquinha: () => void
+  setCasquinhaPrice: (price: number) => void
   setPaymentMethod: (method: PaymentMethod) => void
   setAmountReceived: (value: number | null) => void
   setSecondMethod: (method: PaymentMethod | null) => void
@@ -64,6 +67,7 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   pricePerGram: null,
   amount: null,
   hasCasquinha: false,
+  casquinhaPrice: CASQUINHA_PRICE,
   paymentMethod: null,
   amountReceived: null,
   change: null,
@@ -74,8 +78,8 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   isConfirming: false,
 
   captureWeight: (grams, pricePerGram) => {
-    const { hasCasquinha } = get()
-    const amount = calcSaleAmount(grams, pricePerGram, hasCasquinha)
+    const { hasCasquinha, casquinhaPrice } = get()
+    const amount = calcSaleAmount(grams, pricePerGram, hasCasquinha, casquinhaPrice)
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 
@@ -84,13 +88,19 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 
+  // Preço vem da loja (locations.casquinha_price), carregado no PDV. Enquanto
+  // não chega, vale CASQUINHA_PRICE — o valor praticado antes da coluna.
+  setCasquinhaPrice: (price) => {
+    if (Number.isFinite(price) && price > 0) set({ casquinhaPrice: price })
+  },
+
   toggleCasquinha: () => {
-    const { hasCasquinha, capturedWeightGrams, pricePerGram } = get()
+    const { hasCasquinha, capturedWeightGrams, pricePerGram, casquinhaPrice } = get()
     const next = !hasCasquinha
     // Recompute amount in lock-step with the toggle when a weight
     // is already captured (AC3 — real-time recalculation).
     if (capturedWeightGrams !== null && pricePerGram !== null) {
-      const amount = calcSaleAmount(capturedWeightGrams, pricePerGram, next)
+      const amount = calcSaleAmount(capturedWeightGrams, pricePerGram, next, casquinhaPrice)
       // Also reset cash change to avoid showing stale troco against
       // the previous amount (the cashier would notice, but better to
       // be explicit).

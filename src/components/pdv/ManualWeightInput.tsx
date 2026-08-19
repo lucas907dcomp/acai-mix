@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSaleStore, formatCurrency } from '@/stores/saleStore'
 import { usePricePerGram } from '@/hooks/usePricePerGram'
-import { CASQUINHA_PRICE } from '@/constants/pricing'
+import { useCasquinhaPrice } from '@/hooks/useCasquinhaPrice'
 import type { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 
 interface ManualWeightInputProps {
@@ -11,6 +11,7 @@ interface ManualWeightInputProps {
 }
 
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
+  const casquinhaPrice = useCasquinhaPrice()
   const [digits, setDigits] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -44,12 +45,12 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
             <div className="flex justify-between text-[#9d7bc8]">
               <span>Açaí {capturedWeight}g</span>
               <span className="tabular-nums">
-                {formatCurrency(capturedAmount - CASQUINHA_PRICE)}
+                {formatCurrency(capturedAmount - casquinhaPrice)}
               </span>
             </div>
             <div className="flex justify-between text-[#9d7bc8]">
               <span>+ Casquinha</span>
-              <span className="tabular-nums">{formatCurrency(CASQUINHA_PRICE)}</span>
+              <span className="tabular-nums">{formatCurrency(casquinhaPrice)}</span>
             </div>
           </div>
         )}

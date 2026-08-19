@@ -1,10 +1,11 @@
 import { useSaleStore, formatCurrency } from '@/stores/saleStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { usePricePerGram } from '@/hooks/usePricePerGram'
-import { CASQUINHA_PRICE } from '@/constants/pricing'
+import { useCasquinhaPrice } from '@/hooks/useCasquinhaPrice'
 import { IceCreamCone } from 'lucide-react'
 
 export function PriceDisplay() {
+  const casquinhaPrice = useCasquinhaPrice()
   const currentWeight = useScaleStore((s) => s.currentWeightGrams)
   const capturedWeight = useSaleStore((s) => s.capturedWeightGrams)
   const amount = useSaleStore((s) => s.amount)
@@ -66,7 +67,7 @@ export function PriceDisplay() {
           >
             <IceCreamCone size={16} />
             <span className="text-sm font-medium leading-none">
-              +{formatCurrency(CASQUINHA_PRICE)}
+              +{formatCurrency(casquinhaPrice)}
             </span>
             <span
               className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
