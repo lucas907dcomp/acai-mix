@@ -7,7 +7,13 @@ import { useCasquinhaPrice } from '@/hooks/useCasquinhaPrice'
 import type { ManualInputProvider } from '@/providers/scale/ManualInputProvider'
 
 interface ManualWeightInputProps {
-  provider: ManualInputProvider
+  /**
+   * Só existe no modo manual "de verdade" (balança desconectada), onde o peso
+   * precisa ser empurrado para o provider. No lançamento manual pontual, com a
+   * balança conectada, não há provider manual — e não deve haver: o peso da
+   * balança continua chegando normalmente por trás.
+   */
+  provider?: ManualInputProvider
 }
 
 export function ManualWeightInput({ provider }: ManualWeightInputProps) {
@@ -125,7 +131,7 @@ export function ManualWeightInput({ provider }: ManualWeightInputProps) {
     if (!pricePerGram) return
 
     const grams = Math.round(reais / pricePerGram)
-    provider.setWeight(grams)
+    provider?.setWeight(grams)
     captureAmount(reais, pricePerGram)
 
     setDigits('')

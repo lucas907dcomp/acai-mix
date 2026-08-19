@@ -270,7 +270,20 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     }
   },
 
-  reset: () =>
+  reset: () => {
+    // O lançamento manual pontual vale por UMA venda. Desligar aqui cobre
+    // todos os caminhos de saída de uma vez — venda concluída, adicionada ao
+    // pedido, descartada pelo teclado — em vez de depender de cada tela
+    // lembrar de voltar para a balança.
+    //
+    // Import dinâmico para não criar dependência de módulo entre as stores
+    // (scaleStore não conhece saleStore, e assim continua).
+    void import('@/stores/scaleStore').then(({ useScaleStore }) => {
+      if (useScaleStore.getState().manualOverride) {
+        useScaleStore.getState().setManualOverride(false)
+      }
+    })
+
     set({
       capturedWeightGrams: null,
       pricePerGram: null,
@@ -283,5 +296,6 @@ export const useSaleStore = create<SaleState>((set, get) => ({
       secondAmount: null,
       secondAmountReceived: null,
       secondChange: null,
-    }),
+    })
+  },
 }))
