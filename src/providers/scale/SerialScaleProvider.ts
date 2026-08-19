@@ -11,8 +11,10 @@ import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 // 9600 8N1 nos dois casos.
 //
 // Medido na Toledo em 18/08/2026: resposta ao ENQ em ~69ms (28-115ms) e 169
-// leituras seguidas sem uma falha. Perguntar a cada 250ms dá 4 leituras por
-// segundo, com folga de quase 4x sobre o que ela aguenta.
+// leituras seguidas sem uma falha. Perguntar a cada 200ms dá 5 leituras por
+// segundo. O intervalo precisa ficar acima da PIOR latência medida (115ms),
+// senão um ENQ sai antes de a resposta anterior chegar e os pacotes se
+// embaralham no buffer — 200ms deixa 85ms de margem.
 export type ScaleMode = 'continuous' | 'polling'
 
 const BAUD_RATE = 9600
@@ -20,7 +22,7 @@ const PACKET_LENGTH = 7
 const STX = 0x02
 const ETX = 0x03
 const ENQ = 0x05
-const POLL_INTERVAL_MS = 250
+const POLL_INTERVAL_MS = 200
 const WATCHDOG_TIMEOUT_MS = 10_000
 const WATCHDOG_INTERVAL_MS = 3_000
 
