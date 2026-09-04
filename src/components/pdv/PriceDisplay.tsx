@@ -57,7 +57,7 @@ export function PriceDisplay() {
             type="button"
             role="switch"
             aria-checked={hasCasquinha}
-            aria-label="Adicionar casquinha por R$ 1,00"
+            aria-label={`Adicionar casquinha por ${formatCurrency(casquinhaPrice)}`}
             onClick={toggleCasquinha}
             className={`flex items-center gap-2 rounded-lg px-3 py-2 border transition-colors shrink-0 ${
               hasCasquinha

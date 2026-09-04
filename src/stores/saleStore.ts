@@ -88,10 +88,28 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     set({ capturedWeightGrams: grams, pricePerGram, amount })
   },
 
-  // Preço vem da loja (locations.casquinha_price), carregado no PDV. Enquanto
-  // não chega, vale CASQUINHA_PRICE — o valor praticado antes da coluna.
+  // Preço vem da loja (locations.casquinha_price), carregado no PDV pelo
+  // useCasquinhaPrice. Enquanto não chega, vale CASQUINHA_PRICE — o valor
+  // praticado antes da coluna.
   setCasquinhaPrice: (price) => {
-    if (Number.isFinite(price) && price > 0) set({ casquinhaPrice: price })
+    if (!Number.isFinite(price) || price <= 0) return
+
+    const { casquinhaPrice, hasCasquinha, capturedWeightGrams, pricePerGram } = get()
+    if (price === casquinhaPrice) return
+
+    set({ casquinhaPrice: price })
+
+    // O preço chega por rede, então pode cair DEPOIS de a casquinha já ter
+    // sido marcada — nesse caso o total foi somado com o valor antigo e ficaria
+    // mentindo. Recalcula, e zera o troco pelo mesmo motivo do toggleCasquinha:
+    // troco calculado contra um total que mudou é troco errado.
+    if (hasCasquinha && capturedWeightGrams !== null && pricePerGram !== null) {
+      set({
+        amount: calcSaleAmount(capturedWeightGrams, pricePerGram, true, price),
+        amountReceived: null,
+        change: null,
+      })
+    }
   },
 
   toggleCasquinha: () => {

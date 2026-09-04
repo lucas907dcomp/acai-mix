@@ -11,8 +11,9 @@ import type { Product } from '@/types'
  * açaí-by-weight flow (Story 10.4 / EPIC-10).
  *
  * Tapping a card opens UnitSaleModal for that product. The açaí flow
- * (ScaleConnectionStatus → WeightDisplay → PriceDisplay → CasquinhaToggle
- * → PaymentMethodSelector → ConfirmSaleButton) is completely untouched.
+ * (ScaleConnectionStatus → WeightDisplay → PriceDisplay → PaymentMethodSelector
+ * → ConfirmSaleButton) is completely untouched. O toggle da casquinha mora
+ * dentro do PriceDisplay.
  */
 export function UnitProductsGrid() {
   const { data: products, isLoading, error, refetch } = usePdvProducts()

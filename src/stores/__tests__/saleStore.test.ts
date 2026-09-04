@@ -7,6 +7,8 @@ beforeEach(() => {
     pricePerGram: null,
     amount: null,
     hasCasquinha: false,
+    // Sem isto o preço vaza de um teste para o outro: o store é singleton.
+    casquinhaPrice: 1.0,
     paymentMethod: null,
     amountReceived: null,
     change: null,
@@ -158,5 +160,61 @@ describe('saleStore.toggleCasquinha', () => {
     useSaleStore.getState().toggleCasquinha()
     expect(useSaleStore.getState().amountReceived).toBeNull()
     expect(useSaleStore.getState().change).toBeNull()
+  })
+})
+
+/**
+ * O bug da AçaiMix Barra (04/09/2026): o rótulo do PDV mostrava "+R$ 2,00" e o
+ * total subia só R$ 1,00. A causa era este preço nunca sair do default, porque
+ * quem chamava setCasquinhaPrice era um componente que nunca foi montado.
+ */
+describe('saleStore.setCasquinhaPrice', () => {
+  it('o toggle soma o preço da loja, não o default', () => {
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().toggleCasquinha()
+    // 300 × 0,07 = 21,00 + 2,00 = 23,00
+    expect(useSaleStore.getState().amount).toBe(23.0)
+  })
+
+  it('captureWeight com casquinha já ativa usa o preço da loja', () => {
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    useSaleStore.getState().toggleCasquinha()
+    useSaleStore.getState().captureWeight(300, 0.07)
+    expect(useSaleStore.getState().amount).toBe(23.0)
+  })
+
+  it('recalcula o total quando o preço chega depois da casquinha marcada', () => {
+    // A ordem que a rede pode produzir: peso, toggle, e só então o preço.
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().toggleCasquinha()
+    expect(useSaleStore.getState().amount).toBe(22.0) // ainda com o default
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    expect(useSaleStore.getState().amount).toBe(23.0)
+  })
+
+  it('não mexe no total quando a casquinha não está marcada', () => {
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    expect(useSaleStore.getState().amount).toBe(21.0)
+  })
+
+  it('zera o troco ao recalcular, porque o total mudou', () => {
+    useSaleStore.getState().captureWeight(300, 0.07)
+    useSaleStore.getState().toggleCasquinha()
+    useSaleStore.getState().setPaymentMethod('cash')
+    useSaleStore.getState().setAmountReceived(25)
+    expect(useSaleStore.getState().change).toBe(3) // 25 - 22
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    expect(useSaleStore.getState().amountReceived).toBeNull()
+    expect(useSaleStore.getState().change).toBeNull()
+  })
+
+  it('ignora preço inválido e mantém o que já valia', () => {
+    useSaleStore.getState().setCasquinhaPrice(2.0)
+    useSaleStore.getState().setCasquinhaPrice(0)
+    useSaleStore.getState().setCasquinhaPrice(-1)
+    useSaleStore.getState().setCasquinhaPrice(NaN)
+    expect(useSaleStore.getState().casquinhaPrice).toBe(2.0)
   })
 })

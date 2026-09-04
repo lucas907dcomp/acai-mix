@@ -1,7 +1,7 @@
 import { Package } from 'lucide-react'
 import { useProductSalesSummary } from '@/hooks/useProductSalesSummary'
+import { useCasquinhaPrice } from '@/hooks/useCasquinhaPrice'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CASQUINHA_PRICE } from '@/constants/pricing'
 import type { DatePeriod } from '@/types/dashboard'
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -12,6 +12,9 @@ interface Props {
 
 export function ProductSalesBreakdown({ period }: Props) {
   const { data, isLoading, error } = useProductSalesSummary(period)
+  // Era CASQUINHA_PRICE fixo, o que subfaturava a casquinha pela metade em
+  // qualquer loja que não cobre R$ 1,00.
+  const casquinhaPrice = useCasquinhaPrice()
 
   const totalAmount = (data ?? []).reduce((s, r) => s + r.total_amount, 0)
   const totalCasquinha = (data ?? []).reduce((s, r) => s + r.casquinha_count, 0)
@@ -82,7 +85,7 @@ export function ProductSalesBreakdown({ period }: Props) {
               <td className="px-4 py-3 text-[#9d7bc8] italic text-xs">+ Casquinha (add-on)</td>
               <td className="px-4 py-3 text-right text-[#9d7bc8] text-xs">{totalCasquinha}</td>
               <td className="px-4 py-3 text-right text-[#10b981] font-medium text-xs">
-                {fmt.format(totalCasquinha * CASQUINHA_PRICE)}
+                {fmt.format(totalCasquinha * casquinhaPrice)}
               </td>
               <td className="px-4 py-3 text-right text-[#9d7bc8] text-xs">—</td>
             </tr>
