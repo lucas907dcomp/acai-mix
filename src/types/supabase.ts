@@ -34,6 +34,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing: {
+        Row: {
+          id: number
+          paid_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          paid_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          paid_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_consumptions: {
         Row: {
           amount: number
