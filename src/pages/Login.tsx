@@ -3,11 +3,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { lastBrand } from '@/lib/brand'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const { login, isLoading, error } = useAuth()
+  const brand = lastBrand()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -24,10 +26,10 @@ export default function Login() {
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-2">
             <div className="w-12 h-12 rounded-full bg-[#4c1e8c] flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
+              <span className="text-white font-bold text-lg">{brand[0].toUpperCase()}</span>
             </div>
           </div>
-          <CardTitle className="text-white text-2xl">AçaiMix</CardTitle>
+          <CardTitle className="text-white text-2xl">{brand}</CardTitle>
           <CardDescription className="text-[#9d7bc8]">
             Entre com suas credenciais para acessar o sistema
           </CardDescription>

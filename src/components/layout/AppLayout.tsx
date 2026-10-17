@@ -9,6 +9,7 @@ import { useLocationData } from '@/hooks/useLocationData'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
 import { LocationSelector } from '@/components/layout/LocationSelector'
 import { cn } from '@/lib/utils'
+import { BRAND_KEY } from '@/lib/brand'
 
 const ADMIN_LINKS = [
   { to: '/pos', label: 'Caixa (PDV)', icon: ShoppingCart },
@@ -38,6 +39,19 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const syncInitialized = useRef(false)
   const { data: location } = useLocationData()
+
+  // A tela de login não sabe de que cliente é o aparelho (mesmo site para
+  // todos). Guarda a marca da última loja logada para mostrar lá.
+  useEffect(() => {
+    if (!location) return
+    const brand = location.brand_name ?? location.name
+    document.title = brand
+    try {
+      localStorage.setItem(BRAND_KEY, brand)
+    } catch {
+      /* sem storage: login mostra o nome genérico */
+    }
+  }, [location])
 
   useEffect(() => {
     if (syncInitialized.current) return
@@ -85,7 +99,7 @@ export function AppLayout() {
           </span>
         </div>
         <span className="text-white font-semibold text-lg truncate">
-          {location?.name ?? 'AçaiMix'}
+          {location?.name ?? 'PDV'}
         </span>
       </div>
 
@@ -161,7 +175,7 @@ export function AppLayout() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="text-white font-semibold">{location?.name ?? 'AçaiMix'}</span>
+          <span className="text-white font-semibold">{location?.name ?? 'PDV'}</span>
         </header>
 
         <main className="flex-1 overflow-auto">

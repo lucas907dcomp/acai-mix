@@ -34,8 +34,37 @@ interface SalePayload {
 
 interface ShiftRecord {
   id: string
+  location_id: string
   opened_at: string
   closed_at: string | null
+}
+
+// A função grava com service role, que passa por cima do RLS. Sem esta
+// checagem, qualquer usuário logado gravaria venda em qualquer loja só
+// mudando o location_id do corpo — com mais de um cliente no mesmo banco,
+// a loja de um poderia sujar o caixa do outro.
+async function allowedLocations(
+  supabase: ReturnType<typeof createClient>,
+  req: Request
+): Promise<Set<string> | null> {
+  const jwt = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!jwt) return null
+  const { data: { user } } = await supabase.auth.getUser(jwt)
+  if (!user) return null
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('location_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const { data: linked } = await supabase
+    .from('user_locations')
+    .select('location_id')
+    .eq('user_id', user.id)
+
+  return new Set(
+    [profile?.location_id, ...(linked ?? []).map((l) => l.location_id)].filter(Boolean)
+  )
 }
 
 async function findShiftByTimestamp(
@@ -45,7 +74,7 @@ async function findShiftByTimestamp(
 ): Promise<ShiftRecord | null> {
   const { data } = await supabase
     .from('shifts')
-    .select('id, opened_at, closed_at')
+    .select('id, location_id, opened_at, closed_at')
     .eq('location_id', locationId)
     .lte('opened_at', createdAt)
     .or(`closed_at.is.null,closed_at.gt.${createdAt}`)
@@ -71,6 +100,14 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey)
 
+  const allowed = await allowedLocations(supabase, req)
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+
   let body: { sales: SalePayload[] }
   try {
     body = await req.json()
@@ -90,14 +127,32 @@ Deno.serve(async (req) => {
 
   for (const sale of sales) {
     try {
+      if (!allowed.has(sale.location_id)) {
+        errors.push({ id: sale.id, error: 'Location not allowed for this user' })
+        continue
+      }
+
+      // Venda com este id já gravada em outra loja: não sobrescreve.
+      const { data: existing } = await supabase
+        .from('sales')
+        .select('location_id')
+        .eq('id', sale.id)
+        .maybeSingle()
+      if (existing && existing.location_id !== sale.location_id) {
+        errors.push({ id: sale.id, error: 'Sale belongs to another location' })
+        continue
+      }
+
       let shift_id = sale.shift_id
       let sync_reconciled = false
 
-      const { data: shift } = await supabase
+      const { data: found } = await supabase
         .from('shifts')
-        .select('id, opened_at, closed_at')
+        .select('id, location_id, opened_at, closed_at')
         .eq('id', sale.shift_id)
         .maybeSingle<ShiftRecord>()
+      // Turno de outra loja conta como inexistente: reconcilia pelo horário.
+      const shift = found?.location_id === sale.location_id ? found : null
 
       if (!shift) {
         const correctShift = await findShiftByTimestamp(supabase, sale.location_id, sale.created_at)

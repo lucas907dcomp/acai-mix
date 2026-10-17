@@ -117,6 +117,8 @@ export type Database = {
       locations: {
         Row: {
           active: boolean
+          brand_name: string | null
+          logo_url: string | null
           address: string | null
           created_at: string
           id: string
@@ -124,6 +126,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          brand_name?: string | null
+          logo_url?: string | null
           address?: string | null
           created_at?: string
           id?: string
@@ -131,6 +135,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          brand_name?: string | null
+          logo_url?: string | null
           address?: string | null
           created_at?: string
           id?: string

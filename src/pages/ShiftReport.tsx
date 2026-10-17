@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import acaiLogo from '@/assets/acai-mix-logo.jpg'
 import type { Shift, Sale } from '@/types'
 
 const fmt = (v: number) =>
@@ -55,6 +54,7 @@ const SECTION_COLORS = ['#7b2d8b', '#00b5a0'] // turno 1 = roxo, turno 2 = verde
 interface DayData {
   shifts: Shift[]
   salesByShift: Record<string, Sale[]>
+  brand: { name: string; logoUrl: string | null }
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
@@ -220,7 +220,15 @@ export default function ShiftReport() {
         salesByShift[s.id] = allSales.filter((x) => x.shift_id === s.id)
       })
 
-      setData({ shifts, salesByShift })
+      // Marca da loja no cabeçalho: mesmo banco serve clientes diferentes.
+      const { data: loc } = await supabase
+        .from('locations')
+        .select('name, brand_name, logo_url')
+        .eq('id', anchor.location_id)
+        .maybeSingle()
+      const brand = { name: loc?.brand_name ?? loc?.name ?? '', logoUrl: loc?.logo_url ?? null }
+
+      setData({ shifts, salesByShift, brand })
       setLoading(false)
     }
     load()
@@ -282,12 +290,11 @@ export default function ShiftReport() {
         <div style={{ borderBottom: '3px solid #f5c800', padding: '22px 32px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <img src={acaiLogo} alt="Açaí Mix" style={{ width: '58px', height: '58px', borderRadius: '50%', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 }} />
-              <div>
-                <div style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.3px', color: '#7b2d8b' }}>
-                  AÇAÍ<span style={{ color: '#00b5a0' }}>MIX</span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, letterSpacing: '0.5px' }}>SELF SERVICE</div>
+              {data.brand.logoUrl && (
+                <img src={data.brand.logoUrl} alt={data.brand.name} style={{ width: '58px', height: '58px', borderRadius: '50%', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 }} />
+              )}
+              <div style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.3px', color: '#7b2d8b' }}>
+                {data.brand.name}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -379,8 +386,7 @@ export default function ShiftReport() {
 
         {/* ── FOOTER ── */}
         <div style={{ borderTop: '1px solid #e5e7eb', padding: '10px 32px', display: 'flex', justifyContent: 'space-between', background: '#f9fafb' }}>
-          <span style={{ fontSize: '10px', color: '#9ca3af' }}>Açaí Mix Self Service · {fmtDateLong(refDate)}</span>
-          <span style={{ fontSize: '10px', color: '#d1d5db' }}>acaimix.app</span>
+          <span style={{ fontSize: '10px', color: '#9ca3af' }}>{data.brand.name} · {fmtDateLong(refDate)}</span>
         </div>
 
       </div>
