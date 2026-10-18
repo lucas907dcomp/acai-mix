@@ -45,4 +45,8 @@ DROP POLICY "user_profiles_select_admin" ON user_profiles;
 CREATE POLICY "user_profiles_select_admin" ON user_profiles FOR SELECT TO authenticated
   USING (is_admin() AND location_id = get_my_location_id());
 
+DROP POLICY "user_profiles_insert_admin" ON user_profiles;
+CREATE POLICY "user_profiles_insert_admin" ON user_profiles FOR INSERT TO authenticated
+  WITH CHECK (fn_is_admin_of_location(location_id));
+
 COMMIT;
