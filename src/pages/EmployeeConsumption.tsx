@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/stores/saleStore'
+import { useAuthStore } from '@/stores/authStore'
 import {
   useEmployees,
   useAddEmployee,
@@ -184,7 +185,7 @@ function EmployeeConsumptionCard({
 }: {
   employee: Employee
   entries: { id: string; amount: number; description: string | null; consumed_at: string }[]
-  onDelete: (id: string) => void
+  onDelete?: (id: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const total = entries.reduce((sum, e) => sum + e.amount, 0)
@@ -229,13 +230,15 @@ function EmployeeConsumptionCard({
                     {format(parseISO(e.consumed_at), 'dd/MM', { locale: ptBR })}
                   </span>
                 </div>
-                <button
-                  onClick={() => onDelete(e.id)}
-                  className="text-[#9d7bc8] hover:text-red-400 transition-colors flex-shrink-0"
-                  aria-label="Remover lançamento"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(e.id)}
+                    className="text-[#9d7bc8] hover:text-red-400 transition-colors flex-shrink-0"
+                    aria-label="Remover lançamento"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -247,7 +250,8 @@ function EmployeeConsumptionCard({
 
 // ─── ConsumptionsTab ──────────────────────────────────────────────────────────
 
-function ConsumptionsTab({ employees }: { employees: Employee[] }) {
+// Atendente (staff) lança consumo, mas só o admin apaga e cadastra funcionária.
+function ConsumptionsTab({ employees, canEdit }: { employees: Employee[]; canEdit: boolean }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -261,14 +265,18 @@ function ConsumptionsTab({ employees }: { employees: Employee[] }) {
   const totalMonth = consumptions?.reduce((sum, c) => sum + c.amount, 0) ?? 0
 
   function prevMonth() {
-    if (month === 1) { setMonth(12); setYear((y) => y - 1) }
-    else setMonth((m) => m - 1)
+    if (month === 1) {
+      setMonth(12)
+      setYear((y) => y - 1)
+    } else setMonth((m) => m - 1)
   }
 
   function nextMonth() {
     if (isCurrentMonth) return
-    if (month === 12) { setMonth(1); setYear((y) => y + 1) }
-    else setMonth((m) => m + 1)
+    if (month === 12) {
+      setMonth(1)
+      setYear((y) => y + 1)
+    } else setMonth((m) => m + 1)
   }
 
   async function handleDelete(id: string) {
@@ -339,7 +347,7 @@ function ConsumptionsTab({ employees }: { employees: Employee[] }) {
                 key={employee.id}
                 employee={employee}
                 entries={entries}
-                onDelete={handleDelete}
+                onDelete={canEdit ? handleDelete : undefined}
               />
             )
           })}
@@ -425,7 +433,10 @@ function EmployeesTab() {
               </button>
               <button
                 type="button"
-                onClick={() => { reset(); setAdding(false) }}
+                onClick={() => {
+                  reset()
+                  setAdding(false)
+                }}
                 className="px-3 py-2 text-sm rounded-lg text-[#9d7bc8] hover:bg-[#2d1550] hover:text-white transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -481,6 +492,7 @@ function EmployeesTab() {
 
 export default function EmployeeConsumptionPage() {
   const { data: employees = [], isLoading } = useEmployees()
+  const canEdit = useAuthStore((s) => s.profile?.role) !== 'staff'
 
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto">
@@ -494,12 +506,14 @@ export default function EmployeeConsumptionPage() {
           >
             Consumos
           </TabsTrigger>
-          <TabsTrigger
-            value="employees"
-            className="flex-1 data-[state=active]:bg-[#4c1e8c] data-[state=active]:text-white text-[#9d7bc8]"
-          >
-            Funcionárias
-          </TabsTrigger>
+          {canEdit && (
+            <TabsTrigger
+              value="employees"
+              className="flex-1 data-[state=active]:bg-[#4c1e8c] data-[state=active]:text-white text-[#9d7bc8]"
+            >
+              Funcionárias
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="consumptions" className="mt-4">
@@ -509,13 +523,15 @@ export default function EmployeeConsumptionPage() {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : (
-            <ConsumptionsTab employees={employees} />
+            <ConsumptionsTab employees={employees} canEdit={canEdit} />
           )}
         </TabsContent>
 
-        <TabsContent value="employees" className="mt-4">
-          <EmployeesTab />
-        </TabsContent>
+        {canEdit && (
+          <TabsContent value="employees" className="mt-4">
+            <EmployeesTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

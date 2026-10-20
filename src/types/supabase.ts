@@ -541,6 +541,7 @@ export type Database = {
     }
     Functions: {
       can_cancel_sale: { Args: { p_sale_id: string }; Returns: boolean }
+      close_my_shift: { Args: { p_shift_id: string }; Returns: undefined }
       fn_is_admin_of_location: { Args: { loc_id: string }; Returns: boolean }
       get_my_location_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }

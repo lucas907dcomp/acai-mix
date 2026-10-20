@@ -11,7 +11,7 @@ interface ShiftState {
   error: string | null
   loadActiveShift: (locationId: string) => Promise<void>
   openShift: (locationId: string, openedBy: string) => Promise<void>
-  closeShift: (closedBy: string) => Promise<void>
+  closeShift: () => Promise<void>
   updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
   updateTotalsFromSplit: (amount: number, split: PaymentSplitItem[]) => void
   reverseTotals: (amount: number, paymentMethod: PaymentMethod) => void
@@ -114,16 +114,14 @@ export const useShiftStore = create<ShiftState>()(
         }
       },
 
-      closeShift: async (closedBy) => {
+      closeShift: async () => {
         const { activeShift } = get()
         if (!activeShift) return
 
         set({ isLoading: true, error: null })
         try {
-          const { error } = await supabase
-            .from('shifts')
-            .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: closedBy })
-            .eq('id', activeShift.id)
+          // Função no banco: só muda o status, então staff encerra sem poder mexer nos totais.
+          const { error } = await supabase.rpc('close_my_shift', { p_shift_id: activeShift.id })
 
           if (error) throw error
           set({ activeShift: null })

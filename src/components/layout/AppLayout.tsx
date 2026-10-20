@@ -28,6 +28,7 @@ const OWNER_LINKS = [
 
 const STAFF_LINKS = [
   { to: '/pos', label: 'Caixa (PDV)', icon: ShoppingCart },
+  { to: '/employee-consumption', label: 'Consumo Func.', icon: UtensilsCrossed },
 ]
 
 export function AppLayout() {

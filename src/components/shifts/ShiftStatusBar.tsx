@@ -50,7 +50,7 @@ export function ShiftStatusBar() {
     setIsClosing(true)
     const shiftId = activeShift?.id
     try {
-      await closeShift(profile.id)
+      await closeShift()
       setConfirmOpen(false)
       if (shiftId) {
         window.open(`/shift-report?shiftId=${shiftId}`, '_blank')
@@ -79,7 +79,9 @@ export function ShiftStatusBar() {
           <span className="font-semibold text-[#10b981]">
             {formatCurrency(activeShift.total_sales)}
           </span>
-          {profile?.role === 'admin' && activeShift.shift_number === 2 && (
+          {/* Staff sempre encerra: a loja dele não tem login admin no balcão. */}
+          {((profile?.role === 'admin' && activeShift.shift_number === 2) ||
+            profile?.role === 'staff') && (
             <button
               onClick={() => setConfirmOpen(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"

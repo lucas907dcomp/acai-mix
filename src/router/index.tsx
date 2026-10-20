@@ -27,6 +27,12 @@ export const router = createBrowserRouter([
             lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
           },
           {
+            // Atendente (staff) também lança consumo; o que é de admin fica escondido na página.
+            path: '/employee-consumption',
+            lazy: () =>
+              import('@/pages/EmployeeConsumption').then((m) => ({ Component: m.default })),
+          },
+          {
             // EPIC-11 / Story 11.4 — estrito: admin/staff não acessam,
             // nem por URL direta (satisfiesRequiredRole não amplia
             // "owner" para admin/staff, só o inverso).
@@ -54,11 +60,6 @@ export const router = createBrowserRouter([
                 path: '/sales-history',
                 lazy: () =>
                   import('@/pages/SalesHistoryPage').then((m) => ({ Component: m.default })),
-              },
-              {
-                path: '/employee-consumption',
-                lazy: () =>
-                  import('@/pages/EmployeeConsumption').then((m) => ({ Component: m.default })),
               },
             ],
           },
