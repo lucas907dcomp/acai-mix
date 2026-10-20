@@ -92,7 +92,7 @@ export const useShiftStore = create<ShiftState>()(
       openShift: async (locationId, openedBy, operatorName) => {
         set({ isLoading: true, error: null })
         try {
-          // Loja de um operador (Ponto Mix) manda o nome: turno único, sempre o 1.
+          // Loja de um operador (Power Mix) manda o nome: turno único, sempre o 1.
           const shiftNumber = operatorName ? 1 : getShiftNumber(await buscarHoraTroca(locationId))
           const { data, error } = await supabase
             .from('shifts')

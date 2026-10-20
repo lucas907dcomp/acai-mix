@@ -9,7 +9,7 @@ export function ShiftOpenScreen() {
   const isLoading = useShiftStore((s) => s.isLoading)
   const error = useShiftStore((s) => s.error)
   const profile = useAuthStore((s) => s.profile)
-  // Loja de um operador (Ponto Mix): o dono quer saber quem abriu em cada dia.
+  // Loja de um operador (Power Mix): o dono quer saber quem abriu em cada dia.
   const askName = useLocationData().data?.single_operator ?? false
   const [name, setName] = useState('')
 
