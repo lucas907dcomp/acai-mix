@@ -10,6 +10,10 @@ import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 // Packet (idêntico nos dois): STX (0x02) + 5 ASCII digits + ETX (0x03) = 7 bytes
 // 9600 8N1 nos dois casos.
 //
+// Filizola (Power Mix, 20/10/2026) responde ao ENQ como a Toledo, mas com 27
+// bytes: STX " 00205   5699   1168    0" ETX = peso (g), preço/kg, total.
+// Por isso o pacote é lido de STX até ETX e o peso é o PRIMEIRO campo.
+//
 // Medido na Toledo em 18/08/2026: resposta ao ENQ em ~69ms (28-115ms) e 169
 // leituras seguidas sem uma falha. Perguntar a cada 200ms dá 5 leituras por
 // segundo. O intervalo precisa ficar acima da PIOR latência medida (115ms),
@@ -18,7 +22,8 @@ import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 export type ScaleMode = 'continuous' | 'polling'
 
 const BAUD_RATE = 9600
-const PACKET_LENGTH = 7
+// Teto do buffer entre STX e ETX: lixo sem ETX não cresce para sempre.
+const MAX_PACKET_LENGTH = 64
 const STX = 0x02
 const ETX = 0x03
 const ENQ = 0x05
@@ -142,13 +147,15 @@ export class SerialScaleProvider implements IScaleProvider {
 
         this.lastDataTimestamp = Date.now()
         for (const byte of value) {
+          if (byte === STX) buffer.length = 0
           buffer.push(byte)
-          if (buffer.length > PACKET_LENGTH) buffer.shift()
-          if (buffer.length === PACKET_LENGTH) {
+          if (buffer.length > MAX_PACKET_LENGTH) buffer.length = 0
+          if (byte === ETX) {
             const weight = this.parsePacket(buffer)
             if (weight !== null) {
               this.weightCallbacks.forEach((cb) => cb(weight))
             }
+            buffer.length = 0
           }
         }
       }
@@ -166,11 +173,10 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private parsePacket(buffer: number[]): number | null {
-    if (buffer[0] !== STX) return null
-    if (buffer[6] !== ETX) return null
-    const weightStr = String.fromCharCode(...buffer.slice(1, 6))
-    const grams = parseInt(weightStr, 10)
-    return isNaN(grams) ? null : grams
+    if (buffer[0] !== STX || buffer[buffer.length - 1] !== ETX) return null
+    // Primeiro campo = peso. "IIIII" (instável na UPX) não é número e é ignorado.
+    const weightStr = String.fromCharCode(...buffer.slice(1, -1)).trim().split(/\s+/)[0]
+    return /^\d+$/.test(weightStr) ? parseInt(weightStr, 10) : null
   }
 
   private handleDisconnect(): void {

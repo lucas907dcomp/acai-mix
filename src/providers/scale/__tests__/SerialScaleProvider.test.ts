@@ -82,6 +82,40 @@ describe('SerialScaleProvider', () => {
     expect(onWeight).toHaveBeenCalledWith(750)
   })
 
+  it('parseia resposta de 27 bytes da Filizola (peso, preço/kg, total)', async () => {
+    // Capturado na balança do Power Mix em 20/10/2026: 0,205 kg a R$ 56,99 = R$ 11,68
+    const filizola = new Uint8Array([
+      0x02,
+      ...Array.from(' 00205   5699   1168    0').map((c) => c.charCodeAt(0)),
+      0x03,
+    ])
+    // Chega picado em dois pedaços, como na serial de verdade
+    const port = makeMockPort([filizola.slice(0, 10), filizola.slice(10), makePacket(0)])
+    ;(navigator.serial.requestPort as ReturnType<typeof vi.fn>).mockResolvedValue(port)
+
+    const provider = new SerialScaleProvider()
+    const onWeight = vi.fn()
+    provider.onWeight(onWeight)
+    await provider.connect()
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(onWeight.mock.calls).toEqual([[205], [0]])
+  })
+
+  it('ignora pacote instável (IIIII)', async () => {
+    const instavel = new Uint8Array([0x02, 0x49, 0x49, 0x49, 0x49, 0x49, 0x03])
+    const port = makeMockPort([instavel])
+    ;(navigator.serial.requestPort as ReturnType<typeof vi.fn>).mockResolvedValue(port)
+
+    const provider = new SerialScaleProvider()
+    const onWeight = vi.fn()
+    provider.onWeight(onWeight)
+    await provider.connect()
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(onWeight).not.toHaveBeenCalled()
+  })
+
   it('emite connected:true ao conectar e false ao desconectar', async () => {
     const port = makeMockPort([])
     ;(navigator.serial.requestPort as ReturnType<typeof vi.fn>).mockResolvedValue(port)
