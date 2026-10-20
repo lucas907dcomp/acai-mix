@@ -66,6 +66,8 @@ export interface Shift {
   closed_at: string | null
   closed_by: string | null
   status: ShiftStatus
+  /** Só em loja de um operador (locations.single_operator): quem abriu o turno. */
+  operator_name?: string | null
   total_sales: number
   total_pix: number
   total_card: number

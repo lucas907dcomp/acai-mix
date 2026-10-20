@@ -118,6 +118,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       const { activeShift } = useShiftStore.getState()
       if (!activeShift || activeShift.status !== 'open') return
+      // Turno com nome = loja de um operador: turno único, só fecha à mão.
+      if (activeShift.operator_name) return
 
       await get()._createProvisionalShift(activeShift.location_id)
       toast.warning(

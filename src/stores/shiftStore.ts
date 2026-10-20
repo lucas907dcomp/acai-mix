@@ -10,7 +10,7 @@ interface ShiftState {
   isLoading: boolean
   error: string | null
   loadActiveShift: (locationId: string) => Promise<void>
-  openShift: (locationId: string, openedBy: string) => Promise<void>
+  openShift: (locationId: string, openedBy: string, operatorName?: string) => Promise<void>
   closeShift: () => Promise<void>
   updateTotals: (amount: number, paymentMethod: PaymentMethod) => void
   updateTotalsFromSplit: (amount: number, split: PaymentSplitItem[]) => void
@@ -89,16 +89,18 @@ export const useShiftStore = create<ShiftState>()(
         }
       },
 
-      openShift: async (locationId, openedBy) => {
+      openShift: async (locationId, openedBy, operatorName) => {
         set({ isLoading: true, error: null })
         try {
-          const horaTroca = await buscarHoraTroca(locationId)
+          // Loja de um operador (Ponto Mix) manda o nome: turno único, sempre o 1.
+          const shiftNumber = operatorName ? 1 : getShiftNumber(await buscarHoraTroca(locationId))
           const { data, error } = await supabase
             .from('shifts')
             .insert({
               location_id: locationId,
-              shift_number: getShiftNumber(horaTroca),
+              shift_number: shiftNumber,
               opened_by: openedBy,
+              operator_name: operatorName ?? null,
             })
             .select()
             .single()

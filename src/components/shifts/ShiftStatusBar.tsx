@@ -66,7 +66,8 @@ export function ShiftStatusBar() {
         <div className="flex items-center gap-2 text-[#9d7bc8]">
           <Clock className="w-4 h-4" />
           <span>
-            Turno {activeShift.shift_number} — aberto às {openedAt}
+            Turno {activeShift.shift_number}
+            {activeShift.operator_name && ` · ${activeShift.operator_name}`} — aberto às {openedAt}
           </span>
           <span className="text-[#4a3570]">·</span>
           <span>{elapsed}</span>

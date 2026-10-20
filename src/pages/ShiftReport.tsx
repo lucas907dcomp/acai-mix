@@ -336,6 +336,9 @@ export default function ShiftReport() {
                   <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '99px', background: accentColor, color: 'white', fontWeight: 700, fontSize: '11px', letterSpacing: '0.3px' }}>
                     TURNO {shift.shift_number}
                   </span>
+                  {shift.operator_name && (
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{shift.operator_name}</span>
+                  )}
                   <span style={{ fontSize: '12px', color: '#6b7280' }}>
                     {fmtTime(shift.opened_at)} – {shift.closed_at ? fmtTime(shift.closed_at) : 'em aberto'}
                   </span>

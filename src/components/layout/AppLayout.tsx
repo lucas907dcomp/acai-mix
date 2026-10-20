@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart2, History, LayoutGrid, LogOut, Menu, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
+import { BarChart2, History, LayoutGrid, LogOut, Menu, Package, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
@@ -29,6 +29,7 @@ const OWNER_LINKS = [
 const STAFF_LINKS = [
   { to: '/pos', label: 'Caixa (PDV)', icon: ShoppingCart },
   { to: '/employee-consumption', label: 'Consumo Func.', icon: UtensilsCrossed },
+  { to: '/produtos', label: 'Produtos', icon: Package },
 ]
 
 export function AppLayout() {

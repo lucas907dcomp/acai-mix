@@ -27,6 +27,11 @@ export const router = createBrowserRouter([
             lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
           },
           {
+            // Atendente (staff) cadastra produto avulso sem ver o resto das configurações.
+            path: '/produtos',
+            lazy: () => import('@/pages/StaffProducts').then((m) => ({ Component: m.default })),
+          },
+          {
             // Atendente (staff) também lança consumo; o que é de admin fica escondido na página.
             path: '/employee-consumption',
             lazy: () =>

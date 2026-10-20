@@ -123,6 +123,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          single_operator: boolean
         }
         Insert: {
           active?: boolean
@@ -361,6 +362,7 @@ export type Database = {
           location_id: string
           opened_at: string
           opened_by: string
+          operator_name: string | null
           sale_count: number
           shift_number: number
           status: string
@@ -376,6 +378,7 @@ export type Database = {
           location_id: string
           opened_at?: string
           opened_by: string
+          operator_name?: string | null
           sale_count?: number
           shift_number: number
           status?: string
