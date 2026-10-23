@@ -1,0 +1,106 @@
+{
+  "name": "Açaí Mix · Delivery (protótipo)",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Oi! Sou a atendente do Açaí Mix 💜",
+        "options": {
+          "title": "Açaí Mix · Delivery (teste)"
+        }
+      },
+      "id": "a1",
+      "name": "Chat de teste",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "acai-mix-delivery-chat"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Você é a atendente virtual do Açaí Mix, uma açaiteria. Atende clientes pelo WhatsApp para pedidos de delivery.\n\nJeito de falar: simpática, educada e curta. Mensagens de no máximo 3 linhas, português do Brasil, no máximo 1 emoji por mensagem.\n\nComo atender:\n1. Cumprimente e mande o link do cardápio: https://acai-mix.vercel.app/cardapio\n   Explique que lá a pessoa monta o açaí, escolhe o resto e toca em \"Enviar pedido no WhatsApp\".\n2. Quando chegar uma mensagem que começa com \"*Pedido Açaí Mix*\", é um pedido feito pelo cardápio:\n   - agradeça e repita o total e a forma de pagamento;\n   - se for Pix, diga que a loja já manda a chave;\n   - se for dinheiro ou cartão, diga que o pagamento é na entrega;\n   - diga que a loja vai confirmar o tempo de entrega em seguida.\n3. Se a pessoa quiser pedir escrevendo, ajude, mas mande o link do cardápio para ela conferir os preços.\n\nRegras:\n- Nunca invente preço, taxa de entrega, tempo de entrega, horário de funcionamento ou promoção. Se perguntarem, diga que vai confirmar com a loja.\n- Não aceite pedido fora do cardápio.\n- Se a pessoa reclamar ou pedir para falar com alguém, diga que vai chamar a equipe da loja."
+        }
+      },
+      "id": "a2",
+      "name": "Atendente",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "a3",
+      "name": "Modelo (OpenAI)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 20
+      },
+      "id": "a4",
+      "name": "Memória da conversa",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        360,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Chat de teste": {
+      "main": [
+        [
+          {
+            "node": "Atendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo (OpenAI)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Atendente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória da conversa": {
+      "ai_memory": [
+        [
+          {
+            "node": "Atendente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Maceio"
+  }
+}
