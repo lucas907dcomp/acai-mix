@@ -38,12 +38,15 @@ export interface CombinedOrder {
   items: CombinedOrderItem[]
   total: number
   createdAt: string
+  /** Mesa fixa da loja: ao pagar ou cancelar esvazia, nunca some. */
+  isTable?: boolean
 }
 
 interface CombinedOrderState {
   orders: CombinedOrder[]
   activeOrderId: string | null
   createOrder: (name: string) => void
+  ensureTables: (count: number) => void
   activateOrder: (id: string | null) => void
   addWeightItem: (item: Omit<CombinedOrderWeightItem, 'id'>) => void
   addUnitItem: (item: Omit<CombinedOrderUnitItem, 'id'>) => void
@@ -80,6 +83,13 @@ const MESMO_DIA = (iso: string): boolean => {
   )
 }
 
+/** Tira o pedido da lista; mesa fica, vazia, pronta para a próxima venda. */
+const encerrar = (orders: CombinedOrder[], id: string): CombinedOrder[] =>
+  orders.flatMap((o) => {
+    if (o.id !== id) return [o]
+    return o.isTable ? [{ ...o, items: [], total: 0, createdAt: new Date().toISOString() }] : []
+  })
+
 export const useCombinedOrderStore = create<CombinedOrderState>()(
   persist(
     (set, get) => ({
@@ -95,6 +105,21 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
       createdAt: new Date().toISOString(),
     }
     set((s) => ({ orders: [...s.orders, order] }))
+  },
+
+  ensureTables: (count) => {
+    const { orders } = get()
+    const novas: CombinedOrder[] = Array.from({ length: count }, (_, i) => `Mesa ${i + 1}`)
+      .filter((name) => !orders.some((o) => o.isTable && o.name === name))
+      .map((name) => ({
+        id: crypto.randomUUID(),
+        name,
+        items: [],
+        total: 0,
+        createdAt: new Date().toISOString(),
+        isTable: true,
+      }))
+    if (novas.length > 0) set({ orders: [...novas, ...orders] })
   },
 
   activateOrder: (id) => set({ activeOrderId: id }),
@@ -144,7 +169,7 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
   cancelOrder: (id) => {
     const { activeOrderId } = get()
     set((s) => ({
-      orders: s.orders.filter((o) => o.id !== id),
+      orders: encerrar(s.orders, id),
       activeOrderId: activeOrderId === id ? null : activeOrderId,
     }))
   },
@@ -226,7 +251,7 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
 
     const removeOrder = () =>
       set((s) => ({
-        orders: s.orders.filter((o) => o.id !== orderId),
+        orders: encerrar(s.orders, orderId),
         activeOrderId: activeOrderId === orderId ? null : s.activeOrderId,
       }))
 
@@ -277,7 +302,8 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return
-        const doHoje = state.orders.filter((o) => MESMO_DIA(o.createdAt))
+        // Mesa não expira: conta aberta que virou o dia não pode sumir sozinha.
+        const doHoje = state.orders.filter((o) => o.isTable || MESMO_DIA(o.createdAt))
         if (doHoje.length !== state.orders.length) {
           state.orders = doHoje
         }

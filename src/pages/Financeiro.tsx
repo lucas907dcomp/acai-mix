@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { addMonths, format, parseISO, subMonths } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Plus, ShoppingBag, Trash2, TrendingUp, Wallet } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -12,31 +12,48 @@ import { useFinanceEnabled } from '@/hooks/useFinanceEnabled'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { entradasPorItem, porCategoria, resumoPorMes, type Purchase } from '@/lib/financeiro'
+import {
+  baldesDoGrafico,
+  dentroDe,
+  entradasPorItem,
+  intervalo,
+  moverData,
+  porCategoria,
+  resumoPorBalde,
+  totaisDoIntervalo,
+  type Intervalo,
+  type Purchase,
+  type Visao,
+} from '@/lib/financeiro'
 import { CATEGORIAS, UNIDADES, textos } from '@/content/financeiro'
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const qtd = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 })
 const campo =
   'w-full rounded-lg bg-[#0f0720] border border-[#2d1550] px-3 py-2 text-sm text-white placeholder:text-[#6b4f91] focus:outline-none focus:border-[#9d7bc8]'
+const campoData = campo.replace('w-full', 'w-40')
 const rotulo = 'block text-xs text-[#9d7bc8] mb-1'
 
-const nomeMes = (mes: string, padrao = 'MMMM yyyy') =>
-  format(parseISO(`${mes}-01`), padrao, { locale: ptBR })
+const quando = (data: string, padrao: string) => format(parseISO(data), padrao, { locale: ptBR })
 
-function useDadosFinanceiros(locationId: string, meses: string[]) {
-  const de = `${meses[0]}-01`
-  const ate = format(addMonths(parseISO(`${meses[meses.length - 1]}-01`), 1), 'yyyy-MM-dd')
+const nomeBalde = (b: string) => (b.length === 7 ? quando(`${b}-01`, 'MMM') : quando(b, 'dd/MM'))
 
+function nomeIntervalo(visao: Visao, { de, ate }: Intervalo) {
+  if (visao === 'dia') return quando(de, "dd/MM/yyyy")
+  if (visao === 'mes') return quando(de, 'MMMM yyyy')
+  return `${quando(de, 'dd/MM')} a ${quando(ate, 'dd/MM')}`
+}
+
+function useDadosFinanceiros(locationId: string, de: string, ate: string) {
   const compras = useQuery<Purchase[]>({
-    queryKey: ['purchases', locationId, de],
+    queryKey: ['purchases', locationId, de, ate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchases')
         .select('id, purchase_date, category, item, quantity, unit, amount, supplier')
         .eq('location_id', locationId)
         .gte('purchase_date', de)
-        .lt('purchase_date', ate)
+        .lte('purchase_date', ate)
         .order('purchase_date', { ascending: false })
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -46,14 +63,14 @@ function useDadosFinanceiros(locationId: string, meses: string[]) {
   })
 
   const vendas = useQuery({
-    queryKey: ['finance-sales', locationId, de],
+    queryKey: ['finance-sales', locationId, de, ate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('daily_summary')
         .select('sale_date, total_amount')
         .eq('location_id', locationId)
         .gte('sale_date', de)
-        .lt('sale_date', ate)
+        .lte('sale_date', ate)
       if (error) throw error
       return (data ?? []) as { sale_date: string; total_amount: number }[]
     },
@@ -170,15 +187,28 @@ export default function Financeiro() {
   const habilitado = useFinanceEnabled()
   const locationId = useAuthStore((s) => s.profile?.location_id) ?? ''
   const queryClient = useQueryClient()
-  const [mes, setMes] = useState(() => format(new Date(), 'yyyy-MM'))
+  const hoje = format(new Date(), 'yyyy-MM-dd')
+  const [visao, setVisao] = useState<Visao>('mes')
+  const [ref, setRef] = useState(hoje)
+  const [livre, setLivre] = useState<Intervalo>(() => intervalo('mes', hoje))
   const [lancando, setLancando] = useState(false)
   const [apagando, setApagando] = useState<string | null>(null)
 
-  const meses = useMemo(
-    () => [5, 4, 3, 2, 1, 0].map((n) => format(subMonths(parseISO(`${mes}-01`), n), 'yyyy-MM')),
-    [mes]
+  const periodo = useMemo(() => {
+    if (visao !== 'periodo') return intervalo(visao, ref)
+    // Datas invertidas no filtro: vale o intervalo entre elas.
+    const [de, ate] = [livre.de, livre.ate].sort()
+    return { de, ate }
+  }, [visao, ref, livre])
+  const baldes = useMemo(() => baldesDoGrafico(visao, periodo), [visao, periodo])
+
+  // Busca o que o período e o gráfico precisam (o gráfico pode voltar mais).
+  const inicioBusca = baldes[0].length === 7 ? `${baldes[0]}-01` : baldes[0]
+  const { compras, vendas } = useDadosFinanceiros(
+    locationId,
+    inicioBusca < periodo.de ? inicioBusca : periodo.de,
+    periodo.ate
   )
-  const { compras, vendas } = useDadosFinanceiros(locationId, meses)
 
   const apagar = useMutation({
     mutationFn: async (id: string) => {
@@ -192,38 +222,82 @@ export default function Financeiro() {
   if (habilitado === false) return <Navigate to="/pos" replace />
 
   const todas = compras.data ?? []
-  const doMes = todas.filter((p) => p.purchase_date.startsWith(mes))
-  const resumo = resumoPorMes(meses, vendas.data ?? [], todas)
-  const atual = resumo[resumo.length - 1]
-  const categorias = porCategoria(doMes)
-  const entradas = entradasPorItem(doMes)
+  const doPeriodo = todas.filter((p) => dentroDe(p.purchase_date, periodo))
+  const resumo = resumoPorBalde(baldes, vendas.data ?? [], todas)
+  const atual = totaisDoIntervalo(periodo, vendas.data ?? [], todas)
+  const categorias = porCategoria(doPeriodo)
+  const entradas = entradasPorItem(doPeriodo)
   const sugestoes = [...new Set(todas.map((p) => p.item))]
   const carregando = compras.isLoading || vendas.isLoading
-  const mudarMes = (delta: number) =>
-    setMes(format(addMonths(parseISO(`${mes}-01`), delta), 'yyyy-MM'))
+  const andar = (passo: number) => {
+    if (visao !== 'periodo') setRef(moverData(visao, ref, passo))
+  }
+  const trocarVisao = (nova: Visao) => {
+    // Ao abrir o filtro de datas, começa no que já estava na tela.
+    if (nova === 'periodo') setLivre(periodo)
+    setVisao(nova)
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-white">{textos.titulo}</h1>
-        <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => setLancando(true)}
+          className="flex items-center gap-2 rounded-lg bg-[#4c1e8c] hover:bg-[#5d2aa6] text-white text-sm font-medium px-4 py-2 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          {textos.botaoLancar}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 bg-[#1a0b2e] border border-[#2d1550] rounded-lg p-1 w-fit">
+          {textos.visoes.map((v) => (
+            <button
+              key={v.valor}
+              onClick={() => trocarVisao(v.valor as Visao)}
+              aria-pressed={visao === v.valor}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                visao === v.valor
+                  ? 'bg-[#4c1e8c] text-white font-medium'
+                  : 'text-[#9d7bc8] hover:text-white hover:bg-[#2d1550]'
+              }`}
+            >
+              {v.rotulo}
+            </button>
+          ))}
+        </div>
+
+        {visao === 'periodo' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              aria-label="Data inicial"
+              value={livre.de}
+              onChange={(e) => e.target.value && setLivre({ ...livre, de: e.target.value })}
+              className={campoData}
+            />
+            <span className="text-sm text-[#9d7bc8]">até</span>
+            <input
+              type="date"
+              aria-label="Data final"
+              value={livre.ate}
+              onChange={(e) => e.target.value && setLivre({ ...livre, ate: e.target.value })}
+              className={campoData}
+            />
+          </div>
+        ) : (
           <div className="flex items-center gap-1 bg-[#1a0b2e] border border-[#2d1550] rounded-lg p-1">
-            <button onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="p-1.5 rounded-md text-[#9d7bc8] hover:text-white hover:bg-[#2d1550]">
+            <button onClick={() => andar(-1)} aria-label="Anterior" className="p-1.5 rounded-md text-[#9d7bc8] hover:text-white hover:bg-[#2d1550]">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm text-white w-36 text-center capitalize">{nomeMes(mes)}</span>
-            <button onClick={() => mudarMes(1)} aria-label="Próximo mês" className="p-1.5 rounded-md text-[#9d7bc8] hover:text-white hover:bg-[#2d1550]">
+            <span className="text-sm text-white w-36 text-center first-letter:uppercase">{nomeIntervalo(visao, periodo)}</span>
+            <button onClick={() => andar(1)} aria-label="Próximo" className="p-1.5 rounded-md text-[#9d7bc8] hover:text-white hover:bg-[#2d1550]">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <button
-            onClick={() => setLancando(true)}
-            className="flex items-center gap-2 rounded-lg bg-[#4c1e8c] hover:bg-[#5d2aa6] text-white text-sm font-medium px-4 py-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {textos.botaoLancar}
-          </button>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -235,11 +309,11 @@ export default function Financeiro() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="bg-[#1a0b2e] border-[#2d1550] lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#9d7bc8]">{textos.grafico}</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#9d7bc8]">{textos.grafico[visao]}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={resumo.map((r) => ({ ...r, nome: nomeMes(r.mes, 'MMM') }))}>
+              <BarChart data={resumo.map((r) => ({ ...r, nome: nomeBalde(r.balde) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d1550" vertical={false} />
                 <XAxis dataKey="nome" tick={{ fill: '#9d7bc8', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#9d7bc8', fontSize: 12 }} axisLine={false} tickLine={false} width={80} tickFormatter={(v: number) => fmt.format(v).replace(/,00$/, '')} />
@@ -281,7 +355,7 @@ export default function Financeiro() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="bg-[#1a0b2e] border-[#2d1550]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#9d7bc8]">{textos.entrouNoEstoque}</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#9d7bc8]">{textos.totalPorProduto}</CardTitle>
           </CardHeader>
           <CardContent className="divide-y divide-[#2d1550]">
             {entradas.length === 0 && <p className="text-sm text-[#9d7bc8]">{textos.vazio}</p>}
@@ -301,8 +375,8 @@ export default function Financeiro() {
             <CardTitle className="text-sm font-medium text-[#9d7bc8]">{textos.lancamentos}</CardTitle>
           </CardHeader>
           <CardContent className="divide-y divide-[#2d1550]">
-            {doMes.length === 0 && <p className="text-sm text-[#9d7bc8]">{textos.vazio}</p>}
-            {doMes.map((p) => (
+            {doPeriodo.length === 0 && <p className="text-sm text-[#9d7bc8]">{textos.vazio}</p>}
+            {doPeriodo.map((p) => (
               <div key={p.id} className="flex items-center gap-3 py-2.5 text-sm">
                 <span className="text-[#9d7bc8] w-12 flex-shrink-0">{format(parseISO(p.purchase_date), 'dd/MM')}</span>
                 <div className="flex-1 min-w-0">

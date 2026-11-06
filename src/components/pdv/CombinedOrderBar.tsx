@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
+import { useTableCount } from '@/hooks/useTableCount'
 import { CombinedOrderCard } from './CombinedOrderCard'
 import { CreateCombinedOrderDialog } from './CreateCombinedOrderDialog'
 import { CombinedOrderPaymentModal } from './CombinedOrderPaymentModal'
@@ -8,8 +9,25 @@ import { CombinedOrderPaymentModal } from './CombinedOrderPaymentModal'
 export function CombinedOrderBar() {
   const orders = useCombinedOrderStore((s) => s.orders)
   const activeOrderId = useCombinedOrderStore((s) => s.activeOrderId)
+  const ensureTables = useCombinedOrderStore((s) => s.ensureTables)
+  const activateOrder = useCombinedOrderStore((s) => s.activateOrder)
+  const tableCount = useTableCount()
   const [showCreate, setShowCreate] = useState(false)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
+
+  // Os pedidos ficam no localStorage do aparelho, não por loja: se outra loja
+  // logar neste navegador, as mesas somem da tela e não podem ficar selecionadas.
+  const visibleOrders = orders.filter((o) => !o.isTable || !!tableCount)
+
+  useEffect(() => {
+    if (tableCount) ensureTables(tableCount)
+  }, [tableCount, ensureTables])
+
+  useEffect(() => {
+    if (tableCount === 0 && orders.some((o) => o.isTable && o.id === activeOrderId)) {
+      activateOrder(null)
+    }
+  }, [tableCount, orders, activeOrderId, activateOrder])
 
   const payingOrder = payingOrderId ? (orders.find((o) => o.id === payingOrderId) ?? null) : null
 
@@ -26,7 +44,7 @@ export function CombinedOrderBar() {
         </button>
 
         {/* Standby orders */}
-        {orders.map((order) => (
+        {visibleOrders.map((order) => (
           <CombinedOrderCard
             key={order.id}
             order={order}

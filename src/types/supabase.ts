@@ -125,6 +125,7 @@ export type Database = {
           name: string
           single_operator: boolean
           finance_enabled: boolean
+          table_count: number
         }
         Insert: {
           active?: boolean

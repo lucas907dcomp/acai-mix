@@ -43,13 +43,15 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && handleCardClick()}
       className={cn(
-        'relative flex-shrink-0 cursor-pointer rounded-xl border px-3 py-2 transition-all min-w-[120px] max-w-[160px]',
+        'relative flex-shrink-0 cursor-pointer rounded-xl border px-3 py-2 transition-all max-w-[160px]',
+        order.isTable ? 'min-w-[104px]' : 'min-w-[120px]',
         isActive
           ? 'border-amber-500 bg-amber-500/10'
           : 'border-[#2d1550] bg-[#1a0b2e] hover:border-[#4c1e8c]'
       )}
     >
-      {/* Cancel button */}
+      {/* Cancel button: mesa vazia não tem o que cancelar */}
+      {(!order.isTable || order.items.length > 0) && (
       <button
         onClick={handleCancelClick}
         className={cn(
@@ -58,11 +60,12 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
             ? 'bg-red-500 text-white'
             : 'bg-[#2d1550] text-[#9d7bc8] hover:bg-red-500/80 hover:text-white'
         )}
-        title={confirmingCancel ? 'Clique novamente para cancelar' : 'Cancelar pedido'}
-        aria-label="Cancelar pedido"
+        title={confirmingCancel ? 'Clique novamente para cancelar' : order.isTable ? 'Limpar mesa' : 'Cancelar pedido'}
+        aria-label={order.isTable ? 'Limpar mesa' : 'Cancelar pedido'}
       >
         <X className="w-3 h-3" />
       </button>
+      )}
 
       {/* Name */}
       <p className={cn('text-xs font-semibold truncate pr-1', isActive ? 'text-amber-400' : 'text-white')}>
@@ -70,7 +73,7 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
       </p>
 
       {/* Total */}
-      <p className={cn('text-sm font-bold mt-0.5', isActive ? 'text-amber-300' : 'text-[#10b981]')}>
+      <p className={cn('text-sm font-bold mt-0.5', isActive ? 'text-amber-300' : order.isTable && order.items.length === 0 ? 'text-[#6b4f91]' : 'text-[#10b981]')}>
         {formatCurrency(order.total)}
       </p>
 
