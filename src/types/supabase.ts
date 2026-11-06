@@ -124,6 +124,7 @@ export type Database = {
           id: string
           name: string
           single_operator: boolean
+          finance_enabled: boolean
         }
         Insert: {
           active?: boolean
@@ -236,6 +237,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      purchases: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item: string
+          location_id: string
+          purchase_date: string
+          quantity: number | null
+          supplier: string | null
+          unit: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item: string
+          location_id: string
+          purchase_date?: string
+          quantity?: number | null
+          supplier?: string | null
+          unit?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item?: string
+          location_id?: string
+          purchase_date?: string
+          quantity?: number | null
+          supplier?: string | null
+          unit?: string | null
+        }
+        Relationships: []
       }
       sales: {
         Row: {
