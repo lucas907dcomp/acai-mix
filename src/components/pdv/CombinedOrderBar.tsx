@@ -42,7 +42,9 @@ export function CombinedOrderBar() {
       const focused = document.activeElement
       if (focused instanceof HTMLInputElement && !(focused.id === 'manual-value' && focused.value === '0,00')) return
       if (useSaleStore.getState().capturedWeightGrams !== null) return
-      if ((useScaleStore.getState().currentWeightGrams ?? 0) > 0) return
+      // No modo manual o último valor fica como peso atual: só a balança real conta.
+      const scale = useScaleStore.getState()
+      if (scale.providerType !== 'manual' && (scale.currentWeightGrams ?? 0) > 0) return
       e.preventDefault()
       e.stopPropagation()
       setPayingOrderId(active.id)

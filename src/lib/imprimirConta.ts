@@ -58,12 +58,12 @@ export function imprimirConta(conta: Conta) {
   frame.setAttribute('aria-hidden', 'true')
   frame.style.cssText = 'position:fixed;width:0;height:0;border:0'
   frame.srcdoc = htmlConta(conta)
+  const antes = document.activeElement
   frame.onload = () => {
-    const janela = frame.contentWindow
-    if (!janela) return
-    janela.addEventListener('afterprint', () => frame.remove())
-    janela.focus()
-    janela.print()
+    frame.contentWindow?.print() // no Chrome, bloqueia até fechar a janela de impressão
+    frame.remove()
+    // Sem isso o foco fica perdido e os atalhos do pagamento param.
+    if (antes instanceof HTMLElement) antes.focus()
   }
   document.body.appendChild(frame)
 }
