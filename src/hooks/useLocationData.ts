@@ -8,6 +8,7 @@ export interface LocationData {
   address: string | null
   brand_name: string | null
   single_operator: boolean
+  ask_operator_name: boolean
 }
 
 export function useLocationData() {
@@ -18,11 +19,11 @@ export function useLocationData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('locations')
-        .select('id, name, address, brand_name, single_operator')
+        .select('id, name, address, brand_name, single_operator, ask_operator_name')
         .eq('id', locationId!)
         .single()
       if (error) throw error
-      return { id: data.id, name: data.name, address: data.address, brand_name: data.brand_name, single_operator: data.single_operator }
+      return { id: data.id, name: data.name, address: data.address, brand_name: data.brand_name, single_operator: data.single_operator, ask_operator_name: data.ask_operator_name }
     },
     enabled: !!locationId,
     staleTime: 10 * 60_000,

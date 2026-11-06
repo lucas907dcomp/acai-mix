@@ -74,3 +74,24 @@ describe('mesas fixas', () => {
     expect(store().orders.map((o) => o.id)).toEqual(['m'])
   })
 })
+
+describe('mesa fora', () => {
+  const nomes = () => store().orders.map((o) => o.name)
+
+  it('numera sozinha, seleciona e reaproveita o número livre', () => {
+    store().openExtraTable()
+    store().openExtraTable()
+    expect(nomes()).toEqual(['Mesa Fora 1', 'Mesa Fora 2'])
+    expect(store().activeOrderId).toBe(store().orders[1].id)
+    store().cancelOrder(store().orders[0].id)
+    store().openExtraTable()
+    expect(nomes()).toEqual(['Mesa Fora 2', 'Mesa Fora 1'])
+  })
+
+  it('some depois de paga', async () => {
+    store().openExtraTable()
+    store().addUnitItem({ type: 'unit', product_id: 'p', product_name: 'Água', quantity: 1, unit_price: 3, amount: 3 })
+    await store().confirmOrder(store().orders[0].id, 'pix')
+    expect(store().orders).toEqual([])
+  })
+})

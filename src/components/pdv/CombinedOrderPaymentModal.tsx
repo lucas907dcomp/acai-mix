@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { QrCode, CreditCard, Landmark, Banknote, ShoppingBag, SplitSquareHorizontal, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { QrCode, CreditCard, Landmark, Banknote, Printer, ShoppingBag, SplitSquareHorizontal, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/stores/saleStore'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { getQuickValues } from '@/lib/quickValues'
+import { descreverItem, imprimirConta } from '@/lib/imprimirConta'
+import { KEY_TO_PAYMENT } from '@/hooks/usePdvKeyboard'
+import { useTableCount } from '@/hooks/useTableCount'
+import { useLocationData } from '@/hooks/useLocationData'
 import type { CombinedOrder } from '@/stores/combinedOrderStore'
 import type { PaymentMethod, PaymentSplitItem } from '@/types'
 
@@ -31,6 +35,8 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
   const [isConfirming, setIsConfirming] = useState(false)
 
   const confirmOrder = useCombinedOrderStore((s) => s.confirmOrder)
+  const canPrint = !!useTableCount()
+  const location = useLocationData().data
 
   const total = order.total
   const isSplit = secondMethod !== null && secondAmount !== null
@@ -60,6 +66,30 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
     (paymentMethod !== 'cash' || isSplit || amountReceived !== null) &&
     (!(isSplit && secondMethod === 'cash') || secondAmountReceived !== null) &&
     !isConfirming
+
+  function selectMethod(method: PaymentMethod) {
+    if (method === secondMethod) { setSecondMethod(null); setSecondAmount(null); setSecondAmountReceived(null) }
+    setPaymentMethod(method)
+    if (method !== 'cash') setAmountReceived(null)
+  }
+
+  // Mesmos atalhos do caixa: 1 a 4 escolhem a forma, Enter finaliza.
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.repeat) return
+      const method = KEY_TO_PAYMENT[e.key]
+      if (method && !(document.activeElement instanceof HTMLInputElement)) {
+        e.preventDefault()
+        selectMethod(method)
+      } else if (e.key === 'Enter' && canConfirm) {
+        e.preventDefault()
+        handleConfirm()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  })
 
   function handleClose() {
     setPaymentMethod(null)
@@ -100,9 +130,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between items-center text-sm">
               <span className="text-[#9d7bc8] truncate max-w-[60%]">
-                {item.type === 'weight'
-                  ? `Açaí ${item.weight_grams}g${item.has_casquinha ? ' + casquinha' : ''}`
-                  : `${item.product_name} ×${item.quantity}`}
+                {descreverItem(item)}
               </span>
               <span className="text-white font-medium">{formatCurrency(item.amount)}</span>
             </div>
@@ -119,14 +147,10 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
         <div className="space-y-2">
           <p className="text-sm font-medium text-[#9d7bc8]">Forma de pagamento</p>
           <div className="grid grid-cols-2 gap-2">
-            {METHODS_INFO.map(({ method, label, Icon }) => (
+            {METHODS_INFO.map(({ method, label, Icon }, i) => (
               <button
                 key={method}
-                onClick={() => {
-                  if (method === secondMethod) { setSecondMethod(null); setSecondAmount(null); setSecondAmountReceived(null) }
-                  setPaymentMethod(method)
-                  if (method !== 'cash') setAmountReceived(null)
-                }}
+                onClick={() => selectMethod(method)}
                 aria-pressed={paymentMethod === method}
                 className={cn(
                   'flex items-center gap-2 px-3 py-3 rounded-xl border font-medium text-sm transition-all',
@@ -137,6 +161,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 {label}
+                <kbd className="ml-auto text-[10px] opacity-60">{i + 1}</kbd>
               </button>
             ))}
           </div>
@@ -253,6 +278,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
               ))}
             </div>
             <input type="number" inputMode="decimal" step="0.01" min={cashPortion}
+              autoFocus
               value={amountReceived ?? ''}
               onChange={(e) => {
                 if (e.target.value === '') { setAmountReceived(null); return }
@@ -271,6 +297,24 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
               </div>
             )}
           </div>
+        )}
+
+        {canPrint && (
+          <button
+            onClick={() =>
+              imprimirConta({
+                loja: location?.brand_name ?? location?.name ?? '',
+                mesa: order.name,
+                itens: order.items,
+                total,
+                quando: new Date(),
+              })
+            }
+            className="flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-500/50 text-amber-400 text-sm font-medium hover:bg-amber-500/10 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir conta
+          </button>
         )}
 
         {/* Confirm / Cancel */}

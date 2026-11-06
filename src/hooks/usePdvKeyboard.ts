@@ -6,7 +6,7 @@ import { usePricePerGram } from '@/hooks/usePricePerGram'
 import { useReconnectSerial } from '@/hooks/useScale'
 import type { PaymentMethod } from '@/types'
 
-const KEY_TO_PAYMENT: Record<string, PaymentMethod> = {
+export const KEY_TO_PAYMENT: Record<string, PaymentMethod> = {
   '1': 'pix',
   '2': 'credit',
   '3': 'debit',

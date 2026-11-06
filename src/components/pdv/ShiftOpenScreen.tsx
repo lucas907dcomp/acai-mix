@@ -10,13 +10,16 @@ export function ShiftOpenScreen() {
   const error = useShiftStore((s) => s.error)
   const profile = useAuthStore((s) => s.profile)
   // Loja de um operador (Power Mix): o dono quer saber quem abriu em cada dia.
-  const askName = useLocationData().data?.single_operator ?? false
+  const location = useLocationData().data
+  const singleOperator = location?.single_operator ?? false
+  const askName = singleOperator && (location?.ask_operator_name ?? true)
   const [name, setName] = useState('')
 
   async function handleOpen() {
     if (!profile) return
     if (askName && !name.trim()) return
-    await openShift(profile.location_id, profile.id, askName ? name.trim() : undefined)
+    // Turno com nome é o que mantém o turno único; sem perguntar, vale um nome fixo.
+    await openShift(profile.location_id, profile.id, askName ? name.trim() : singleOperator ? 'Caixa' : undefined)
   }
 
   return (

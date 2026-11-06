@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
+import { useSaleStore } from '@/stores/saleStore'
+import { useScaleStore } from '@/stores/scaleStore'
 import { useTableCount } from '@/hooks/useTableCount'
 import { CombinedOrderCard } from './CombinedOrderCard'
 import { CreateCombinedOrderDialog } from './CreateCombinedOrderDialog'
@@ -11,6 +13,7 @@ export function CombinedOrderBar() {
   const activeOrderId = useCombinedOrderStore((s) => s.activeOrderId)
   const ensureTables = useCombinedOrderStore((s) => s.ensureTables)
   const activateOrder = useCombinedOrderStore((s) => s.activateOrder)
+  const openExtraTable = useCombinedOrderStore((s) => s.openExtraTable)
   const tableCount = useTableCount()
   const [showCreate, setShowCreate] = useState(false)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
@@ -29,11 +32,30 @@ export function CombinedOrderBar() {
     }
   }, [tableCount, orders, activeOrderId, activateOrder])
 
+  // Enter com pedido selecionado e nada na balança abre o pagamento. Na captura,
+  // para rodar antes do campo de valor manual, que reclamaria de R$ 0,00.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Enter' || e.repeat) return
+      const active = orders.find((o) => o.id === activeOrderId)
+      if (!active?.items.length || document.querySelector('[role="dialog"]')) return
+      const focused = document.activeElement
+      if (focused instanceof HTMLInputElement && !(focused.id === 'manual-value' && focused.value === '0,00')) return
+      if (useSaleStore.getState().capturedWeightGrams !== null) return
+      if ((useScaleStore.getState().currentWeightGrams ?? 0) > 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      setPayingOrderId(active.id)
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [orders, activeOrderId])
+
   const payingOrder = payingOrderId ? (orders.find((o) => o.id === payingOrderId) ?? null) : null
 
   return (
     <>
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+      <div className={`flex items-center gap-2 pb-0.5 ${tableCount ? 'flex-wrap pt-1.5' : 'overflow-x-auto scrollbar-hide'}`}>
         {/* Create button — always visible, subtle */}
         <button
           onClick={() => setShowCreate(true)}
@@ -52,6 +74,16 @@ export function CombinedOrderBar() {
             onConfirmRequest={(id) => setPayingOrderId(id)}
           />
         ))}
+
+        {!!tableCount && (
+          <button
+            onClick={openExtraTable}
+            className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg border border-dashed border-[#2d1550] text-[#9d7bc8] hover:text-white hover:border-[#4c1e8c] transition-colors text-xs whitespace-nowrap"
+          >
+            <Plus className="w-3 h-3" />
+            Abrir mesa fora
+          </button>
+        )}
       </div>
 
       <CreateCombinedOrderDialog open={showCreate} onClose={() => setShowCreate(false)} />

@@ -126,6 +126,7 @@ export type Database = {
           single_operator: boolean
           finance_enabled: boolean
           table_count: number
+          ask_operator_name: boolean
         }
         Insert: {
           active?: boolean

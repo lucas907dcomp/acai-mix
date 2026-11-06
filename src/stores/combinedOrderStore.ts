@@ -47,6 +47,7 @@ interface CombinedOrderState {
   activeOrderId: string | null
   createOrder: (name: string) => void
   ensureTables: (count: number) => void
+  openExtraTable: () => void
   activateOrder: (id: string | null) => void
   addWeightItem: (item: Omit<CombinedOrderWeightItem, 'id'>) => void
   addUnitItem: (item: Omit<CombinedOrderUnitItem, 'id'>) => void
@@ -120,6 +121,22 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
         isTable: true,
       }))
     if (novas.length > 0) set({ orders: [...novas, ...orders] })
+  },
+
+  // Mesa fora é pedido comum com nome automático: ao pagar ou fechar, some e o
+  // número volta a ficar livre.
+  openExtraTable: () => {
+    const { orders } = get()
+    let n = 1
+    while (orders.some((o) => o.name === `Mesa Fora ${n}`)) n++
+    const order: CombinedOrder = {
+      id: crypto.randomUUID(),
+      name: `Mesa Fora ${n}`,
+      items: [],
+      total: 0,
+      createdAt: new Date().toISOString(),
+    }
+    set({ orders: [...orders, order], activeOrderId: order.id })
   },
 
   activateOrder: (id) => set({ activeOrderId: id }),
