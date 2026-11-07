@@ -74,7 +74,8 @@ export function bytesConta({ loja, mesa, itens, total, quando }: Conta): Uint8Ar
   cmd(ESC, 0x61, 1)
   txt('Conta para conferencia')
   txt('Sem valor fiscal')
-  cmd(ESC, 0x64, 7) // avança o papel até a serrilha (4 deixava o rodapé preso na KP-1025)
+  // Avança até a serrilha com quebras de linha: a KP-1025 ignora ESC d.
+  cmd(...new Array(2).fill(0x0a))
   return new Uint8Array(bytes)
 }
 
