@@ -74,7 +74,7 @@ export function bytesConta({ loja, mesa, itens, total, quando }: Conta): Uint8Ar
   cmd(ESC, 0x61, 1)
   txt('Conta para conferencia')
   txt('Sem valor fiscal')
-  cmd(ESC, 0x64, 4) // avança o papel até a serrilha
+  cmd(ESC, 0x64, 7) // avança o papel até a serrilha (4 deixava o rodapé preso na KP-1025)
   return new Uint8Array(bytes)
 }
 
