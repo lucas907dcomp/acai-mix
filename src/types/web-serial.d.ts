@@ -4,6 +4,7 @@
 interface SerialPortInfo {
   usbVendorId?: number
   usbProductId?: number
+  bluetoothServiceClassId?: string | number
 }
 
 interface SerialOptions {
@@ -39,6 +40,7 @@ interface Serial extends EventTarget {
 interface SerialPortFilter {
   usbVendorId?: number
   usbProductId?: number
+  bluetoothServiceClassId?: string | number
 }
 
 interface Navigator {

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/stores/saleStore'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { getQuickValues } from '@/lib/quickValues'
+import { toast } from 'sonner'
 import { descreverItem, imprimirConta } from '@/lib/imprimirConta'
 import { KEY_TO_PAYMENT } from '@/hooks/usePdvKeyboard'
 import { useTableCount } from '@/hooks/useTableCount'
@@ -308,7 +309,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
                 itens: order.items,
                 total,
                 quando: new Date(),
-              })
+              }).catch(() => toast.error('A impressora não respondeu. Veja se ela está ligada e tente de novo.'))
             }
             className="flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-500/50 text-amber-400 text-sm font-medium hover:bg-amber-500/10 transition-colors"
           >
