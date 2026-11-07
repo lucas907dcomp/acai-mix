@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PenLine, WifiOff } from 'lucide-react'
+import { PenLine, Printer, WifiOff } from 'lucide-react'
+import { toast } from 'sonner'
+import { contaDaVenda, imprimirConta } from '@/lib/imprimirConta'
+import { useTableCount } from '@/hooks/useTableCount'
+import { useLocationData } from '@/hooks/useLocationData'
 import { supabase } from '@/lib/supabase'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
@@ -13,20 +17,20 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog'
-import type { Sale } from '@/types'
+import type { SaleWithProduct } from '@/types'
 import type { PendingSale } from '@/providers/sync/DexieDatabase'
 
-async function fetchShiftSales(shiftId: string): Promise<Sale[]> {
+async function fetchShiftSales(shiftId: string): Promise<SaleWithProduct[]> {
   const { data, error } = await supabase
     .from('sales')
-    .select('*')
+    .select('*, products(name, product_type)')
     .eq('shift_id', shiftId)
     .eq('status', 'COMPLETED')
     .order('created_at', { ascending: false })
     .limit(20)
 
   if (error) throw error
-  return data as Sale[]
+  return data as SaleWithProduct[]
 }
 
 const METHOD_LABEL: Record<string, string> = {
@@ -86,6 +90,9 @@ export function ShiftSalesContent() {
   const cancelPending = useSyncStore((s) => s.cancelPending)
   const [confirmOffline, setConfirmOffline] = useState<PendingSale | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
+  // Mesmo critério da conta da mesa: só loja com mesas imprime.
+  const canPrint = !!useTableCount()
+  const location = useLocationData().data
 
   const { data: syncedSales = [], isLoading } = useQuery({
     queryKey: ['shift-sales', activeShift?.id],
@@ -177,7 +184,22 @@ export function ShiftSalesContent() {
                   <td className="px-3 py-2 text-[#9d7bc8] text-xs">
                     {METHOD_LABEL[sale.payment_method] ?? sale.payment_method}
                   </td>
-                  <td className="px-3 py-2" />
+                  <td className="px-1 py-2 text-right">
+                    {canPrint && (
+                      <button
+                        onClick={() =>
+                          imprimirConta(contaDaVenda(sale, location?.brand_name ?? location?.name ?? '')).catch(() =>
+                            toast.error('A impressora não respondeu. Veja se ela está ligada e tente de novo.')
+                          )
+                        }
+                        className="p-1 text-[#9d7bc8] hover:text-amber-400 transition-colors"
+                        title="Imprimir conta desta venda"
+                        aria-label="Imprimir conta desta venda"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

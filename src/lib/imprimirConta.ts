@@ -1,4 +1,5 @@
 import type { CombinedOrderItem } from '@/stores/combinedOrderStore'
+import type { SaleWithProduct } from '@/types'
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -12,7 +13,7 @@ export function descreverItem(item: CombinedOrderItem): string {
   return `${item.quantity}x ${item.product_name}`
 }
 
-interface Conta {
+export interface Conta {
   loja: string
   mesa: string
   itens: CombinedOrderItem[]
@@ -158,4 +159,16 @@ export async function imprimirConta(conta: Conta): Promise<void> {
     imprimindo = false
     if (antes instanceof HTMLElement) antes.focus()
   }
+}
+
+/** Venda já registrada (balcão ou pedido conjunto) no formato da conta impressa. */
+export function contaDaVenda(v: SaleWithProduct, loja: string): Conta {
+  const itens: CombinedOrderItem[] = v.combined_items?.length
+    ? v.combined_items.map((i, k) => ({ ...i, id: String(k), product_id: i.product_id ?? undefined }) as CombinedOrderItem)
+    : [
+        v.products?.product_type === 'unit'
+          ? { id: '0', type: 'unit', product_id: v.product_id ?? '', product_name: v.products.name, quantity: v.quantity ?? 1, unit_price: v.amount / (v.quantity ?? 1), amount: v.amount }
+          : { id: '0', type: 'weight', weight_grams: v.weight_grams, price_per_gram: v.price_per_gram, has_casquinha: !!v.has_casquinha, amount: v.amount },
+      ]
+  return { loja, mesa: v.combined_order_name || 'Venda no balcao', itens, total: v.amount, quando: new Date(v.created_at) }
 }
