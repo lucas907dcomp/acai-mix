@@ -15,6 +15,18 @@ const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY')!
 const SB_URL = Deno.env.get('SUPABASE_URL')!
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FUSO = 'America/Maceio' // Aracaju
+const WEBHOOK_TOKEN = Deno.env.get('DELIVERY_WEBHOOK_TOKEN') ?? ''
+const WAHA_URL = Deno.env.get('WAHA_ACAI_URL') ?? ''
+const WAHA_KEY = Deno.env.get('WAHA_ACAI_KEY') ?? ''
+
+async function waha(rota: string, body: object) {
+  const r = await fetch(`${WAHA_URL}/api/${rota}`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': WAHA_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) throw new Error(`WAHA ${rota} ${r.status}: ${await r.text()}`)
+}
 const CONVERSA_EXPIRA_H = 6
 const MAX_MENSAGENS = 40
 
@@ -345,6 +357,32 @@ Deno.serve(async (req) => {
 
   try {
     const sb = createClient(SB_URL, SB_SERVICE)
+
+    // WhatsApp (WAHA): token na URL, loja na URL. Responde pelo próprio WAHA.
+    const url = new URL(req.url)
+    if (url.searchParams.has('token')) {
+      if (!WEBHOOK_TOKEN || url.searchParams.get('token') !== WEBHOOK_TOKEN) return json({ erro: 'token' }, 403)
+      const loja = url.searchParams.get('loja') ?? ''
+      const ev = await req.json()
+      const p = ev?.payload ?? {}
+      const chatId: string = p.from ?? ''
+      if (ev?.event !== 'message' || p.fromMe || !/@(c\.us|lid|s\.whatsapp\.net)$/.test(chatId)) return json({ ok: true, ignorado: true })
+      const texto = String(p.body ?? '').trim()
+      if (!texto) {
+        await waha('sendText', { session: ev.session ?? 'default', chatId, text: 'Por aqui eu só consigo ler mensagens escritas 😅 Pode me mandar por texto, por favor?' })
+        return json({ ok: true })
+      }
+      // ponytail: @lid não traz o número; o "ligar" da tela fica com o id. Resolver pelo /api/contacts se incomodar.
+      const telefone = chatId.replace(/@.*/, '')
+      await waha('startTyping', { session: ev.session ?? 'default', chatId }).catch(() => {})
+      const respostas = await atender(sb, loja, telefone, texto.slice(0, 2000))
+      for (const [i, text] of respostas.entries()) {
+        if (i) await new Promise((r) => setTimeout(r, 900))
+        await waha('sendText', { session: ev.session ?? 'default', chatId, text })
+      }
+      return json({ ok: true })
+    }
+
     // Chat de teste: usuário logado do app conversa como cliente da própria loja.
     const jwt = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
     const { data: { user } } = await sb.auth.getUser(jwt)
