@@ -23,4 +23,14 @@ export const textos = {
   cancelar: 'Cancelar',
   confirmarCancelar: 'Confirmar cancelamento',
   novoPedido: (n: number) => `Novo pedido de delivery #${n}`,
+  botaoSimular: 'Simular cliente',
+  simular: {
+    titulo: 'Cliente (teste)',
+    subtitulo: 'Converse como cliente. O pedido cai aqui ao lado.',
+    dica: 'Mande um "oi" como se fosse um cliente no WhatsApp da loja.',
+    placeholder: 'Mensagem',
+    digitando: 'digitando…',
+    reiniciar: 'Recomeçar conversa',
+    erro: '(o atendente não respondeu, tente de novo)',
+  },
 }

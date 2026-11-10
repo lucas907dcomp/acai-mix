@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bike, Copy, Phone, Printer, X } from 'lucide-react'
+import { Bike, Copy, MessageCircle, Phone, Printer, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -16,6 +16,7 @@ import {
   type StatusDelivery,
 } from '@/lib/delivery'
 import { botaoAvancar, colunas, textos } from '@/content/delivery'
+import { SimularCliente } from '@/components/delivery/SimularCliente'
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const hora = (iso: string) =>
@@ -87,6 +88,7 @@ export default function Delivery() {
   const { data: loja } = useLocationData()
   const { data: pedidos = [], isLoading } = usePedidos(locationId)
   const qc = useQueryClient()
+  const [simulando, setSimulando] = useState(false)
 
   const mudar = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: StatusDelivery }) => {
@@ -115,18 +117,26 @@ export default function Delivery() {
   const finalizados = pedidos.filter((p) => p.status === 'entregue' || p.status === 'cancelado')
 
   return (
-    <div className="p-4 md:p-6 space-y-6 text-white">
-      <header>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Bike className="w-6 h-6" /> {textos.titulo}
-        </h1>
-        <p className="text-sm text-[#9d7bc8]">{textos.subtitulo}</p>
+    <div className={simulando ? 'p-4 md:p-6 grid gap-4 xl:grid-cols-[1fr_380px] text-white' : 'p-4 md:p-6 text-white'}>
+    <div className="space-y-6 min-w-0">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bike className="w-6 h-6" /> {textos.titulo}
+          </h1>
+          <p className="text-sm text-[#9d7bc8]">{textos.subtitulo}</p>
+        </div>
+        {!simulando && (
+          <button onClick={() => setSimulando(true)} className="flex items-center gap-2 rounded-lg bg-[#00a884] hover:bg-[#029172] px-3 py-2 text-sm font-semibold">
+            <MessageCircle className="w-4 h-4" /> {textos.botaoSimular}
+          </button>
+        )}
       </header>
 
       {isLoading ? (
         <p className="text-[#9d7bc8]">Carregando…</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className={simulando ? 'grid gap-4 lg:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3' : 'grid gap-4 lg:grid-cols-3'}>
           {colunas.map((c) => {
             const lista = pedidos.filter((p) => p.status === c.status)
             return (
@@ -169,6 +179,8 @@ export default function Delivery() {
           </ul>
         </section>
       )}
+    </div>
+    {simulando && <SimularCliente onFechar={() => setSimulando(false)} />}
     </div>
   )
 }
