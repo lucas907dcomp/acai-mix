@@ -19,6 +19,8 @@ export interface Conta {
   itens: CombinedOrderItem[]
   total: number
   quando: Date
+  /** Linhas soltas abaixo do cabeçalho (delivery: cliente, endereço, pagamento). */
+  extras?: string[]
 }
 
 /** Largura útil da bobina de 58 mm (Knup KP-1025). Bobina de 80 mm: 72mm. */
@@ -48,7 +50,7 @@ function linhaComValor(texto: string, valor: string): string[] {
 }
 
 /** A conta em ESC/POS: é o que vai pela porta serial da impressora. */
-export function bytesConta({ loja, mesa, itens, total, quando }: Conta): Uint8Array {
+export function bytesConta({ loja, mesa, itens, total, quando, extras = [] }: Conta): Uint8Array {
   const bytes: number[] = []
   const cmd = (...b: number[]) => bytes.push(...b)
   const txt = (s: string) => {
@@ -65,6 +67,14 @@ export function bytesConta({ loja, mesa, itens, total, quando }: Conta): Uint8Ar
   txt(mesa)
   txt(data)
   cmd(ESC, 0x61, 0)
+  for (const e of extras) {
+    let resto = ascii(e)
+    while (resto.length > COLUNAS) {
+      txt(resto.slice(0, COLUNAS))
+      resto = resto.slice(COLUNAS)
+    }
+    txt(resto)
+  }
   txt('-'.repeat(COLUNAS))
   for (const i of itens) linhaComValor(ascii(descreverItem(i)), ascii(brl.format(i.amount))).forEach(txt)
   txt('-'.repeat(COLUNAS))
@@ -79,7 +89,7 @@ export function bytesConta({ loja, mesa, itens, total, quando }: Conta): Uint8Ar
   return new Uint8Array(bytes)
 }
 
-export function htmlConta({ loja, mesa, itens, total, quando }: Conta): string {
+export function htmlConta({ loja, mesa, itens, total, quando, extras = [] }: Conta): string {
   const linhas = itens
     .map(
       (i) =>
@@ -102,6 +112,7 @@ td { padding: 2px 0; vertical-align: top }
 <h1>${escapar(loja)}</h1>
 <p>${escapar(mesa)}</p>
 <p>${data}</p>
+${extras.map((e) => `<p style="text-align:left">${escapar(e)}</p>`).join('')}
 <table>${linhas}<tr class="t"><td>TOTAL</td><td class="v">${brl.format(total)}</td></tr></table>
 <p>Conta para conferência</p>
 <p>Sem valor fiscal</p>

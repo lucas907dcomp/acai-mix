@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart2, Boxes, History, LayoutGrid, LogOut, Menu, Package, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
+import { BarChart2, Bike, Boxes, History, LayoutGrid, LogOut, Menu, Package, Settings, ShoppingCart, UtensilsCrossed, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useLocationData } from '@/hooks/useLocationData'
-import { useFinanceEnabled } from '@/hooks/useFinanceEnabled'
+import { useDeliveryEnabled, useFinanceEnabled } from '@/hooks/useFinanceEnabled'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
 import { LocationSelector } from '@/components/layout/LocationSelector'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,9 @@ const OWNER_LINKS = [
 // Só em loja com locations.finance_enabled.
 const FINANCE_LINK = { to: '/financeiro', label: 'Estoque / Financeiro', icon: Boxes }
 
+// Só em loja com locations.delivery_enabled; vale para todos os papéis.
+const DELIVERY_LINK = { to: '/delivery', label: 'Delivery', icon: Bike }
+
 const STAFF_LINKS = [
   { to: '/pos', label: 'Caixa (PDV)', icon: ShoppingCart },
   { to: '/employee-consumption', label: 'Consumo Func.', icon: UtensilsCrossed },
@@ -46,6 +49,7 @@ export function AppLayout() {
   const syncInitialized = useRef(false)
   const { data: location } = useLocationData()
   const financeEnabled = useFinanceEnabled()
+  const deliveryEnabled = useDeliveryEnabled()
 
   // A tela de login não sabe de que cliente é o aparelho (mesmo site para
   // todos). Guarda a marca da última loja logada para mostrar lá.
@@ -69,10 +73,13 @@ export function AppLayout() {
 
   const roleLinks =
     profile?.role === 'owner' ? OWNER_LINKS : profile?.role === 'admin' ? ADMIN_LINKS : STAFF_LINKS
-  const links =
+  const comFinanceiro =
     financeEnabled && roleLinks !== STAFF_LINKS
       ? roleLinks.flatMap((l) => (l.to === '/dashboard' ? [l, FINANCE_LINK] : [l]))
       : roleLinks
+  const links = deliveryEnabled
+    ? comFinanceiro.flatMap((l) => (l.to === '/pos' ? [l, DELIVERY_LINK] : [l]))
+    : comFinanceiro
 
   async function handleLogout() {
     await supabase.auth.signOut()

@@ -32,6 +32,11 @@ export const router = createBrowserRouter([
             lazy: () => import('@/pages/POS').then((m) => ({ Component: m.default })),
           },
           {
+            // Delivery: caixa (staff ou admin) recebe os pedidos do WhatsApp.
+            path: '/delivery',
+            lazy: () => import('@/pages/Delivery').then((m) => ({ Component: m.default })),
+          },
+          {
             // Atendente (staff) cadastra produto avulso sem ver o resto das configurações.
             path: '/produtos',
             lazy: () => import('@/pages/StaffProducts').then((m) => ({ Component: m.default })),
