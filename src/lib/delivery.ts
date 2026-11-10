@@ -1,7 +1,7 @@
 import type { Conta } from '@/lib/imprimirConta'
 import type { CombinedOrderUnitItem } from '@/stores/combinedOrderStore'
 
-export type StatusDelivery = 'novo' | 'preparo' | 'saiu' | 'entregue' | 'cancelado'
+export type StatusDelivery = 'novo' | 'preparo' | 'aguardando' | 'saiu' | 'entregue' | 'cancelado'
 
 export interface ItemDelivery {
   nome: string
@@ -29,7 +29,8 @@ export interface PedidoDelivery {
 /** Próximo passo de cada status: o botão principal do cartão. */
 export const PROXIMO: Partial<Record<StatusDelivery, StatusDelivery>> = {
   novo: 'preparo',
-  preparo: 'saiu',
+  preparo: 'aguardando',
+  aguardando: 'saiu',
   saiu: 'entregue',
 }
 

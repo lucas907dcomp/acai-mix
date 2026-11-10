@@ -30,6 +30,15 @@ async function waha(rota: string, body: object) {
 const CONVERSA_EXPIRA_H = 6
 const MAX_MENSAGENS = 40
 
+// Aviso ao cliente quando o caixa muda a fase do pedido na tela /delivery.
+const AVISOS: Record<string, (n: number) => string> = {
+  preparo: (n) => `Oba! Seu pedido *#${n}* foi aceito e já está em preparo 💜🍧`,
+  aguardando: (n) => `Seu pedido *#${n}* está pronto e aguardando o entregador 🛵`,
+  saiu: (n) => `Seu pedido *#${n}* saiu para entrega! Já já chega aí 🛵💨`,
+  entregue: (n) => `Pedido *#${n}* entregue. Bom apetite e obrigado pela preferência! 💜`,
+  cancelado: (n) => `Seu pedido *#${n}* foi cancelado. Qualquer dúvida, é só chamar por aqui.`,
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -130,7 +139,7 @@ ${loja.info || '(a loja ainda não preencheu)'}
 # Limites
 - Item, sabor, tamanho ou preço fora do cardápio não existe: diga que não tem e sugira o mais parecido.
 - Nunca calcule total ou soma de cabeça: diga só o total que montar_resumo informar. Preço de um item do cardápio pode dizer.
-- Se as informações da loja listam bairros atendidos e o bairro do cliente não está na lista, avise antes do resumo que a equipe vai confirmar se entrega nesse bairro, e siga com o pedido normalmente.
+- Bairro: se as informações da loja listam bairros atendidos e o do cliente não está, siga a regra escrita pela loja; sem regra escrita, a loja NÃO entrega lá: diga com gentileza que não atende esse bairro e não monte nem confirme o pedido.
 - Horário, bairro atendido, tempo de entrega, chave Pix, promoção: só o que está nas informações da loja. Se não estiver, diga que a equipe da loja confirma por aqui.
 - Fora do horário de funcionamento (se informado), avise que a loja está fechada e quando abre.
 - Reclamação, pedido já confirmado que precisa mudar ou cancelar, ou assunto fora do delivery: diga que a equipe da loja vai responder por aqui em instantes.
@@ -254,6 +263,9 @@ export function montarResumo(args: any, menu: ItemMenu[], taxa: number): Rascunh
 
 // ---------------------------------------------------------------- núcleo
 
+/** Tokens da chamada em curso (a função atende uma mensagem por vez). */
+const uso = { entrada: 0, saida: 0, cache: 0 }
+
 async function openai(mensagens: Msg[]) {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -262,6 +274,9 @@ async function openai(mensagens: Msg[]) {
   })
   if (!r.ok) throw new Error(`OpenAI ${r.status}: ${await r.text()}`)
   const j = await r.json()
+  uso.entrada += j.usage?.prompt_tokens ?? 0
+  uso.saida += j.usage?.completion_tokens ?? 0
+  uso.cache += j.usage?.prompt_tokens_details?.cached_tokens ?? 0
   return j.choices[0].message as Msg & { content: string | null; tool_calls?: any[] }
 }
 
@@ -273,7 +288,7 @@ function aparar(m: Msg[]): Msg[] {
   return m.slice(i)
 }
 
-export async function atender(sb: SupabaseClient, locationId: string, telefone: string, texto: string) {
+export async function atender(sb: SupabaseClient, locationId: string, telefone: string, texto: string, chatId: string | null = null) {
   const [{ data: l, error: el }, { data: menu, error: em }, { data: conv }] = await Promise.all([
     sb.from('locations').select('id, name, brand_name, delivery_enabled, delivery_agent_name, delivery_info, delivery_fee').eq('id', locationId).single(),
     sb.from('delivery_menu').select('id, secao, nome, descricao, tamanhos, acomp_opcoes, acomp_inclusos, acomp_extra').eq('location_id', locationId).eq('ativo', true).order('ordem'),
@@ -310,7 +325,7 @@ export async function atender(sb: SupabaseClient, locationId: string, telefone: 
         if (typeof r === 'string') saida = r
         else {
           estado.rascunho = r
-          saida = `OK. Total ${brl(r.total)}. Antes de mandar: o bairro de "${r.endereco}" está nos bairros atendidos das informações da loja? Se não estiver, avise numa mensagem que a equipe vai confirmar se entrega lá. Depois mande [RESUMO] e peça a confirmação.`
+          saida = `OK. Total ${brl(r.total)}. Antes de mandar: o bairro de "${r.endereco}" está nos bairros atendidos das informações da loja? Se não estiver e a loja não escreveu outra regra, NÃO mande o resumo: diga que não entregamos nesse bairro. Se estiver, mande [RESUMO] e peça a confirmação.`
         }
       } else if (nome === 'confirmar_pedido') {
         const r = estado.rascunho
@@ -318,7 +333,7 @@ export async function atender(sb: SupabaseClient, locationId: string, telefone: 
         else {
           const { resumo: _, subtotal: __, ...pedido } = r
           const { data, error } = await sb.from('delivery_orders')
-            .insert({ ...pedido, location_id: locationId, cliente_telefone: telefone.slice(0, 20) })
+            .insert({ ...pedido, location_id: locationId, cliente_telefone: telefone.slice(0, 20), whatsapp_chat: chatId })
             .select('numero').single()
           if (error) saida = `Erro ao gravar: ${error.message}. Diga que houve um problema e que a equipe da loja vai confirmar.`
           else {
@@ -337,6 +352,9 @@ export async function atender(sb: SupabaseClient, locationId: string, telefone: 
     }
   }
 
+  const antes = (estado as any).uso ?? { entrada: 0, saida: 0, cache: 0, respostas: 0 }
+  ;(estado as any).uso = { entrada: antes.entrada + uso.entrada, saida: antes.saida + uso.saida, cache: antes.cache + uso.cache, respostas: antes.respostas + 1 }
+  uso.entrada = uso.saida = uso.cache = 0
   estado.mensagens = aparar(estado.mensagens)
   await sb.from('delivery_conversas').upsert({ location_id: locationId, telefone, mensagens: estado, updated_at: new Date().toISOString() })
 
@@ -375,7 +393,7 @@ Deno.serve(async (req) => {
       // ponytail: @lid não traz o número; o "ligar" da tela fica com o id. Resolver pelo /api/contacts se incomodar.
       const telefone = chatId.replace(/@.*/, '')
       await waha('startTyping', { session: ev.session ?? 'default', chatId }).catch(() => {})
-      const respostas = await atender(sb, loja, telefone, texto.slice(0, 2000))
+      const respostas = await atender(sb, loja, telefone, texto.slice(0, 2000), chatId)
       for (const [i, text] of respostas.entries()) {
         if (i) await new Promise((r) => setTimeout(r, 900))
         await waha('sendText', { session: ev.session ?? 'default', chatId, text })
@@ -390,7 +408,15 @@ Deno.serve(async (req) => {
     const { data: perfil } = await sb.from('user_profiles').select('location_id').eq('id', user.id).single()
     if (!perfil?.location_id) return json({ erro: 'Sem loja' }, 403)
 
-    const { mensagem, reiniciar } = await req.json()
+    const { mensagem, reiniciar, avisar } = await req.json()
+    if (avisar) {
+      const { data: o } = await sb.from('delivery_orders').select('numero, status, whatsapp_chat, location_id').eq('id', avisar).single()
+      if (!o || o.location_id !== perfil.location_id) return json({ erro: 'Pedido' }, 404)
+      const texto = AVISOS[o.status]?.(o.numero)
+      if (!o.whatsapp_chat || !texto) return json({ ok: true, enviado: false })
+      await waha('sendText', { session: 'default', chatId: o.whatsapp_chat, text: texto })
+      return json({ ok: true, enviado: true })
+    }
     const telefone = `teste-${user.id.slice(0, 8)}`
     if (reiniciar) {
       await sb.from('delivery_conversas').delete().eq('location_id', perfil.location_id).eq('telefone', telefone)

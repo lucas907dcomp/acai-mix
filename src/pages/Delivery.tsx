@@ -71,7 +71,7 @@ function usePedidos(locationId: string | undefined) {
         .from('delivery_orders')
         .select('id, numero, cliente_nome, cliente_telefone, endereco, itens, total, pagamento, troco_para, observacao, status, created_at')
         .eq('location_id', locationId!)
-        .or(`created_at.gte.${desde},status.in.(novo,preparo,saiu)`)
+        .or(`created_at.gte.${desde},status.in.(novo,preparo,aguardando,saiu)`)
         .order('numero', { ascending: true })
       if (error) throw error
       return data as unknown as PedidoDelivery[]
@@ -94,6 +94,8 @@ export default function Delivery() {
     mutationFn: async ({ id, status }: { id: string; status: StatusDelivery }) => {
       const { error } = await supabase.from('delivery_orders').update({ status }).eq('id', id)
       if (error) throw error
+      // Aviso no WhatsApp do cliente; falhar aqui não desfaz a mudança de fase.
+      supabase.functions.invoke('delivery-agente', { body: { avisar: id } }).catch(() => {})
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['delivery-orders', locationId] }),
     onError: () => toast.error('Não consegui atualizar o pedido. Confira a internet.'),
@@ -136,7 +138,7 @@ export default function Delivery() {
       {isLoading ? (
         <p className="text-[#9d7bc8]">Carregando…</p>
       ) : (
-        <div className={simulando ? 'grid gap-4 lg:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3' : 'grid gap-4 lg:grid-cols-3'}>
+        <div className={simulando ? 'grid gap-4 md:grid-cols-2 2xl:grid-cols-4' : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4'}>
           {colunas.map((c) => {
             const lista = pedidos.filter((p) => p.status === c.status)
             return (

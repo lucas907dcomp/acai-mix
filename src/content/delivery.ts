@@ -4,12 +4,14 @@ import type { StatusDelivery } from '@/lib/delivery'
 export const colunas: { status: StatusDelivery; titulo: string; vazio: string }[] = [
   { status: 'novo', titulo: 'Novos', vazio: 'Nenhum pedido novo' },
   { status: 'preparo', titulo: 'Em preparo', vazio: 'Nada em preparo' },
+  { status: 'aguardando', titulo: 'Aguardando entregador', vazio: 'Ninguém esperando' },
   { status: 'saiu', titulo: 'Saiu para entrega', vazio: 'Nenhum na rua' },
 ]
 
 export const botaoAvancar: Partial<Record<StatusDelivery, string>> = {
   novo: 'Aceitar e imprimir',
-  preparo: 'Saiu para entrega',
+  preparo: 'Chamei o entregador',
+  aguardando: 'Saiu para entrega',
   saiu: 'Entregue',
 }
 
