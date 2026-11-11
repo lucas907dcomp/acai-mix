@@ -8,8 +8,8 @@ export const router = createBrowserRouter([
     lazy: () => import('@/router/RootRedirect').then((m) => ({ Component: m.default })),
   },
   {
-    // Cardápio de delivery: público, sem login (protótipo).
-    path: '/cardapio',
+    // Cardápio de delivery: público, sem login. Sem id = loja de demonstração.
+    path: '/cardapio/:loja?',
     lazy: () => import('@/pages/Cardapio').then((m) => ({ Component: m.default })),
   },
   {

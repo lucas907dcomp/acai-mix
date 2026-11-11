@@ -12,38 +12,46 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      delivery_conversas: {
+        Row: {
+          location_id: string
+          mensagens: Json
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          location_id: string
+          mensagens?: Json
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          location_id?: string
+          mensagens?: Json
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_conversas_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_menu: {
         Row: {
+          acomp_extra: number | null
+          acomp_inclusos: number | null
+          acomp_opcoes: string[] | null
           ativo: boolean
           created_at: string
           descricao: string | null
+          foto_url: string | null
           id: string
           location_id: string
           nome: string
@@ -52,9 +60,13 @@ export type Database = {
           tamanhos: Json
         }
         Insert: {
+          acomp_extra?: number | null
+          acomp_inclusos?: number | null
+          acomp_opcoes?: string[] | null
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          foto_url?: string | null
           id?: string
           location_id: string
           nome: string
@@ -63,9 +75,13 @@ export type Database = {
           tamanhos: Json
         }
         Update: {
+          acomp_extra?: number | null
+          acomp_inclusos?: number | null
+          acomp_opcoes?: string[] | null
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          foto_url?: string | null
           id?: string
           location_id?: string
           nome?: string
@@ -96,9 +112,11 @@ export type Database = {
           observacao: string | null
           pagamento: string
           status: string
+          taxa_entrega: number
           total: number
           troco_para: number | null
           updated_at: string
+          whatsapp_chat: string | null
         }
         Insert: {
           cliente_nome: string
@@ -112,9 +130,11 @@ export type Database = {
           observacao?: string | null
           pagamento: string
           status?: string
+          taxa_entrega?: number
           total: number
           troco_para?: number | null
           updated_at?: string
+          whatsapp_chat?: string | null
         }
         Update: {
           cliente_nome?: string
@@ -128,9 +148,11 @@ export type Database = {
           observacao?: string | null
           pagamento?: string
           status?: string
+          taxa_entrega?: number
           total?: number
           troco_para?: number | null
           updated_at?: string
+          whatsapp_chat?: string | null
         }
         Relationships: [
           {
@@ -230,7 +252,12 @@ export type Database = {
           brand_name: string | null
           casquinha_price: number
           created_at: string
+          delivery_agent_name: string | null
+          delivery_cor: string | null
           delivery_enabled: boolean
+          delivery_fee: number
+          delivery_info: string | null
+          delivery_whatsapp: string | null
           finance_enabled: boolean
           id: string
           logo_url: string | null
@@ -247,7 +274,12 @@ export type Database = {
           brand_name?: string | null
           casquinha_price?: number
           created_at?: string
+          delivery_agent_name?: string | null
+          delivery_cor?: string | null
           delivery_enabled?: boolean
+          delivery_fee?: number
+          delivery_info?: string | null
+          delivery_whatsapp?: string | null
           finance_enabled?: boolean
           id?: string
           logo_url?: string | null
@@ -264,7 +296,12 @@ export type Database = {
           brand_name?: string | null
           casquinha_price?: number
           created_at?: string
+          delivery_agent_name?: string | null
+          delivery_cor?: string | null
           delivery_enabled?: boolean
+          delivery_fee?: number
+          delivery_info?: string | null
+          delivery_whatsapp?: string | null
           finance_enabled?: boolean
           id?: string
           logo_url?: string | null
@@ -727,6 +764,17 @@ export type Database = {
     Functions: {
       can_cancel_sale: { Args: { p_sale_id: string }; Returns: boolean }
       close_my_shift: { Args: { p_shift_id: string }; Returns: undefined }
+      fn_cardapio_loja: {
+        Args: { loc: string }
+        Returns: {
+          cor: string
+          info: string
+          logo_url: string
+          nome: string
+          taxa: number
+          whatsapp: string
+        }[]
+      }
       fn_is_admin_of_location: { Args: { loc_id: string }; Returns: boolean }
       get_my_location_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
@@ -868,9 +916,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
