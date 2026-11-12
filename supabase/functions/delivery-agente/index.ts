@@ -82,23 +82,9 @@ const centavos = (n: number) => Math.round(n * 100) / 100
 
 // ---------------------------------------------------------------- cardápio
 
-export function textoCardapio(loja: Loja, menu: ItemMenu[]): string {
-  const linhas = [`*Cardápio ${loja.nome}* 💜`]
-  let secao = ''
-  for (const i of menu) {
-    if (i.secao !== secao) {
-      secao = i.secao
-      linhas.push('', `*${secao.toUpperCase()}*`)
-    }
-    const precos = i.tamanhos.length === 1
-      ? brl(i.tamanhos[0].preco)
-      : i.tamanhos.map((t) => `${t.nome} ${brl(t.preco)}`).join(' · ')
-    linhas.push(`• *${i.nome}*: ${precos}`)
-    if (i.descricao) linhas.push(`  _${i.descricao}_`)
-    if (i.acomp_opcoes?.length) linhas.push(`  Acompanhamentos: ${i.acomp_opcoes.join(', ')}`)
-  }
-  if (loja.taxa > 0) linhas.push('', `Taxa de entrega: ${brl(loja.taxa)}`)
-  return linhas.join('\n')
+/** O que o cliente recebe: o link do cardápio virtual da loja (fotos, montar, pedir). */
+export function linkCardapio(loja: Loja): string {
+  return `*Cardápio ${loja.nome}* 💜\nÉ só abrir, escolher e tocar em pedir:\nhttps://acai-mix.vercel.app/cardapio/${loja.id}\n\nSe preferir, me diga aqui mesmo o que deseja 😉`
 }
 
 /** Para o modelo: cada item com o id que ele usa no montar_resumo. */
@@ -128,7 +114,7 @@ ${loja.taxa > 0 ? `Taxa de entrega: ${brl(loja.taxa)}.` : 'Taxa de entrega: não
 ${loja.info || '(a loja ainda não preencheu)'}
 
 # Como você atende
-1. Cumprimente pelo nome da loja e pergunte o que a pessoa quer. Se ela pedir o cardápio, não souber o que pedir ou perguntar o que tem: escreva [CARDAPIO] sozinho numa mensagem (o sistema troca pelo cardápio formatado com preços).
+1. Cumprimente pelo nome da loja e pergunte o que a pessoa quer. Se ela pedir o cardápio, não souber o que pedir ou perguntar o que tem: escreva [CARDAPIO] sozinho numa mensagem (o sistema troca pelo link do cardápio virtual, com fotos e preços, onde ela monta e pede).
 2. Item com acompanhamentos já descritos (ex.: açaí da casa) vem exatamente assim: não pergunte acompanhamento. Só pergunte o tamanho se a pessoa não disse. Se ela quiser tirar ou trocar algo, anote em obs. Se quiser algo A MAIS (ex.: granola extra) e o cardápio tiver item de adicional, inclua esse item (uma unidade por extra, dizendo em obs qual) e avise o valor; sem item de adicional no cardápio, diga que a equipe confirma.
 3. Item DE MONTAR: pergunte os acompanhamentos (só as opções listadas). Se passar dos inclusos, avise quanto custa cada extra e siga; o sistema cobra os extras sozinho, então NÃO adicione item de adicional para eles. Mande os escolhidos em acompanhamentos.
 4. Depois dos itens, pergunte se deseja mais alguma coisa. Então peça nome e endereço completo (rua, número, bairro e ponto de referência) e a forma de pagamento: Pix, cartão na entrega ou dinheiro (se dinheiro, pergunte troco para quanto).
@@ -360,7 +346,7 @@ export async function atender(sb: SupabaseClient, locationId: string, telefone: 
 
   const mensagens = resposta
     .split(/\n\s*---\s*\n|^---\s*\n|\n---\s*$/)
-    .map((m) => m.replaceAll('[CARDAPIO]', textoCardapio(loja, cardapio))
+    .map((m) => m.replaceAll('[CARDAPIO]', linkCardapio(loja))
       .replaceAll('[RESUMO]', estado.rascunho?.resumo ?? '').trim())
     .filter(Boolean)
   return mensagens
