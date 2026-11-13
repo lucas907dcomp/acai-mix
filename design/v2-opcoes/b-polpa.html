@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Polpa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+/* B · Polpa — escuro refinado, peças em "dupla borda" (casca + núcleo) */
+:root{
+  --bg:#120914; --shell:rgba(255,255,255,.035); --hair:rgba(255,255,255,.08);
+  --core:#1C1021; --core-2:#24152A; --ink:#F5EFF7; --soft:#B6A8BE; --dim:#8B7C93;
+  --banana:#F4C64E; --banana-ink:#2A1A00; --menta:#41D597; --menta-ink:#06281A; --morango:#FF7A8A;
+  --R:22px; --p:6px;
+  --mola:cubic-bezier(.32,.72,0,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:"Plus Jakarta Sans",sans-serif;background:radial-gradient(1200px 600px at 70% -10%,#2A1233 0%,transparent 60%),var(--bg);color:var(--ink);display:grid;grid-template-columns:240px 1fr;font-size:16px}
+.num{font-variant-numeric:tabular-nums}
+.disp{font-family:Unbounded,sans-serif}
+/* dupla borda */
+.casca{background:var(--shell);border:1px solid var(--hair);border-radius:var(--R);padding:var(--p)}
+.nucleo{background:var(--core);border-radius:calc(var(--R) - var(--p));box-shadow:inset 0 1px 0 rgba(255,255,255,.06);padding:20px}
+nav{padding:22px 16px;display:flex;flex-direction:column;gap:4px}
+.loja{display:flex;align-items:center;gap:12px;padding:2px 10px 24px}
+.loja b{width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,#7A2E8E,#3B0F48);display:grid;place-items:center;font-weight:700;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.loja span{font-weight:700;font-size:17px}
+nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:var(--soft);text-decoration:none;font-weight:500;transition:background .3s var(--mola),color .3s var(--mola)}
+nav a i{font-size:21px}
+nav a:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+nav a.on{color:var(--ink);background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--hair)}
+nav a.on i{color:var(--banana)}
+nav .pe{margin-top:auto;padding:12px;font-size:14px;color:var(--soft)} nav .pe strong{display:block;color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--menta);margin-right:6px;box-shadow:0 0 10px var(--menta)}
+main{display:grid;grid-template-columns:1fr 390px;grid-template-rows:auto 1fr;gap:16px;padding:18px 18px 18px 4px;height:100vh;min-height:0}
+.turno{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:12px 18px;color:var(--soft);border:1px solid var(--hair);border-radius:99px;background:var(--shell)}
+.turno strong{color:var(--ink)} .turno .tot{margin-left:auto;color:var(--ink);font-weight:600}
+.turno .tot em{font-style:normal;color:var(--menta)}
+.caixa{display:flex;flex-direction:column;gap:16px;min-height:0}
+.pesagem{flex:1;display:flex}
+.pesagem .nucleo{flex:1;display:grid;grid-template-columns:1fr auto;align-content:space-between;gap:10px 24px;padding:24px 28px;background:linear-gradient(180deg,var(--core-2),var(--core))}
+.bal{grid-column:1/-1;display:flex;gap:14px;align-items:center;font-size:14px;color:var(--soft)}
+.chip{display:inline-flex;align-items:center;gap:7px;color:var(--menta);font-weight:600;padding:6px 12px;border-radius:99px;background:rgba(65,213,151,.1);box-shadow:inset 0 0 0 1px rgba(65,213,151,.25)}
+.bal a{color:var(--soft);text-underline-offset:3px}
+.peso{font-family:Unbounded;font-weight:700;font-size:118px;line-height:.9;letter-spacing:-.04em;align-self:end}
+.peso small{font-size:44px;color:var(--dim);margin-left:8px;letter-spacing:0}
+.valor{text-align:right;align-self:end}
+.valor p{color:var(--dim);font-size:15px;margin-bottom:8px}
+.valor b{font-family:Unbounded;font-size:54px;font-weight:700;letter-spacing:-.03em}
+.capturar{grid-column:1/-1;margin-top:10px;height:64px;border:0;border-radius:99px;background:var(--banana);color:var(--banana-ink);font:700 19px "Plus Jakarta Sans";display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:transform .4s var(--mola)}
+.capturar:active{transform:scale(.98)}
+.capturar kbd{font:600 12px "Plus Jakarta Sans";background:rgba(42,26,0,.12);padding:4px 9px;border-radius:99px}
+h3{font-size:15px;font-weight:600;color:var(--soft);margin-bottom:12px}
+.pags{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.pag{height:72px;border:0;background:var(--core);box-shadow:inset 0 0 0 1px var(--hair);border-radius:16px;display:flex;align-items:center;gap:12px;padding:0 16px;font:600 17px "Plus Jakarta Sans";color:var(--ink);cursor:pointer;position:relative;transition:box-shadow .3s var(--mola),background .3s var(--mola)}
+.pag i{font-size:24px;color:var(--soft)}
+.pag kbd{position:absolute;top:9px;right:12px;font:600 11px "Plus Jakarta Sans";color:var(--dim)}
+.pag.sel{background:rgba(244,198,78,.08);box-shadow:inset 0 0 0 2px var(--banana)} .pag.sel i{color:var(--banana)}
+.confirmar{height:70px;border:0;border-radius:99px;background:var(--menta);color:var(--menta-ink);font:700 21px "Plus Jakarta Sans";display:flex;align-items:center;justify-content:center;gap:14px;cursor:pointer}
+.confirmar .ic{width:40px;height:40px;border-radius:50%;background:rgba(6,40,26,.12);display:grid;place-items:center}
+.conj{display:flex;gap:10px}
+.conj .novo{border:1px dashed rgba(255,255,255,.18);border-radius:16px;padding:0 18px;display:flex;align-items:center;gap:8px;color:var(--soft);font:600 15px "Plus Jakarta Sans";background:none}
+.conj .c{background:var(--core);box-shadow:inset 0 0 0 1px var(--hair);border-radius:16px;padding:11px 16px;min-width:176px}
+.conj .c strong{display:block;font-size:15px} .conj .c b{font-size:20px} .conj .c span{font-size:13px;color:var(--dim);display:flex;justify-content:space-between;margin-top:2px}
+.conj .c span em{font-style:normal;color:var(--banana);font-weight:700}
+aside{display:flex;flex-direction:column;gap:16px;min-height:0}
+.avulsos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.av{background:var(--core-2);border-radius:12px;padding:11px 12px;min-height:66px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.av strong{display:block;font-size:14px;font-weight:600;line-height:1.25} .av span{font-size:14px;color:var(--banana);font-weight:600}
+.vendas{flex:1;min-height:0;display:flex}
+.vendas .nucleo{flex:1;display:flex;flex-direction:column;min-height:0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-weight:500;color:var(--dim);font-size:13px;padding:4px 0 8px}
+td{padding:9px 0;border-top:1px solid rgba(255,255,255,.05)}
+td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right}
+td:nth-child(3){font-weight:600}
+td:last-child,th:last-child{text-align:right;color:var(--soft)}
+.rol{overflow:auto;flex:1}
+.soma{display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--hair);font-weight:700;font-size:17px}
+</style></head><body>
+<nav>
+  <div class="loja"><b>AO</b><span>Açaí da Orla</span></div>
+  <a class="on" href="#"><i class="ph-light ph-cash-register"></i>Caixa</a>
+  <a href="#"><i class="ph-light ph-moped"></i>Delivery</a>
+  <a href="#"><i class="ph-light ph-chart-bar"></i>Painel</a>
+  <a href="#"><i class="ph-light ph-package"></i>Estoque e financeiro</a>
+  <a href="#"><i class="ph-light ph-clock-counter-clockwise"></i>Histórico</a>
+  <a href="#"><i class="ph-light ph-users"></i>Consumo da equipe</a>
+  <a href="#"><i class="ph-light ph-gear-six"></i>Configurações</a>
+  <div class="pe"><strong>Gerente</strong><span class="dot"></span>Online</div>
+</nav>
+<main>
+  <div class="turno"><i class="ph-light ph-clock" style="font-size:20px"></i><span><strong>Turno 1</strong> aberto às 14:50, há 5 h</span><span class="tot num">Vendido no turno <em>R$ 460,42</em></span></div>
+  <section class="caixa">
+    <div class="pesagem casca"><div class="nucleo">
+      <div class="bal"><span class="chip"><i class="ph-bold ph-scales"></i>Balança conectada</span><a href="#">Digitar valor desta venda</a></div>
+      <div class="peso num">350<small>g</small></div>
+      <div class="valor"><p class="num">350 g × R$ 59,99/kg</p><b class="num">R$ 21,00</b></div>
+      <button class="capturar">Capturar peso <kbd>Espaço</kbd></button>
+    </div></div>
+    <div>
+      <h3>Forma de pagamento</h3>
+      <div class="pags">
+        <button class="pag sel"><i class="ph-light ph-qr-code"></i>Pix<kbd>1</kbd></button>
+        <button class="pag"><i class="ph-light ph-credit-card"></i>Crédito<kbd>2</kbd></button>
+        <button class="pag"><i class="ph-light ph-bank"></i>Débito<kbd>3</kbd></button>
+        <button class="pag"><i class="ph-light ph-money"></i>Dinheiro<kbd>4</kbd></button>
+      </div>
+    </div>
+    <button class="confirmar">Confirmar venda de R$ 21,00 <span class="ic"><i class="ph-bold ph-check"></i></span></button>
+    <div class="conj">
+      <button class="novo"><i class="ph-light ph-plus"></i>Pedido conjunto</button>
+      <div class="c"><strong>Família Silva</strong><b class="num">R$ 54,00</b><span>3 itens <em>Pagar</em></span></div>
+      <div class="c"><strong>Turma da Ana</strong><b class="num">R$ 36,59</b><span>2 itens <em>Pagar</em></span></div>
+    </div>
+  </section>
+  <aside>
+    <div class="casca"><div class="nucleo"><h3>Produtos avulsos</h3>
+      <div class="avulsos">
+        <div class="av"><strong>Água</strong><span class="num">R$ 3,00</span></div>
+        <div class="av"><strong>Picolé</strong><span class="num">R$ 5,00</span></div>
+        <div class="av"><strong>Refrigerante lata</strong><span class="num">R$ 6,00</span></div>
+        <div class="av"><strong>Sorvete 2 bolas</strong><span class="num">R$ 12,00</span></div>
+        <div class="av"><strong>Suco natural</strong><span class="num">R$ 8,00</span></div>
+      </div></div></div>
+    <div class="vendas casca"><div class="nucleo"><h3>Vendas do turno</h3>
+      <div class="rol"><table class="num"><tr><th>Hora</th><th>Peso</th><th>Valor</th><th>Pag.</th></tr>
+        <tr><td>19:50</td><td>—</td><td>R$ 8,00</td><td>Pix</td></tr>
+        <tr><td>19:39</td><td>413 g</td><td>R$ 24,78</td><td>Pix</td></tr>
+        <tr><td>19:28</td><td>417 g</td><td>R$ 25,02</td><td>Débito</td></tr>
+        <tr><td>19:17</td><td>296 g</td><td>R$ 17,76</td><td>Pix</td></tr>
+        <tr><td>19:06</td><td>221 g</td><td>R$ 13,26</td><td>Débito</td></tr>
+        <tr><td>18:44</td><td>475 g</td><td>R$ 28,50</td><td>Débito</td></tr>
+        <tr><td>18:33</td><td>563 g</td><td>R$ 33,77</td><td>Pix</td></tr>
+        <tr><td>18:22</td><td>332 g</td><td>R$ 19,92</td><td>Pix</td></tr>
+        <tr><td>18:11</td><td>317 g</td><td>R$ 19,02</td><td>Dinheiro</td></tr>
+      </table></div>
+      <div class="soma num"><span>20 vendas</span><span>R$ 460,42</span></div>
+    </div></div>
+  </aside>
+</main>
+</body></html>
