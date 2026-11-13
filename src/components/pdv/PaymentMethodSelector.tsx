@@ -41,7 +41,7 @@ export function PaymentMethodSelector() {
       {/* ── First method ── */}
       <p className="text-sm font-medium text-[#9d7bc8]">Forma de pagamento</p>
       <div
-        className="grid grid-cols-2 gap-2"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-2"
         role="group"
         aria-label="Selecionar forma de pagamento"
       >
@@ -54,14 +54,14 @@ export function PaymentMethodSelector() {
               disabled={disabled}
               aria-pressed={selected}
               className={cn(
-                'flex items-center gap-2 px-3 py-3 rounded-xl border font-medium text-sm transition-all',
+                'flex items-center gap-2.5 px-4 py-3 lg:py-5 rounded-xl border font-semibold text-base transition-all',
                 disabled && 'opacity-40 cursor-not-allowed',
                 selected
                   ? 'bg-[#10b981]/10 border-[#10b981] text-[#10b981]'
                   : 'bg-[#1a0b2e] border-[#2d1550] text-[#9d7bc8] hover:border-[#4c1e8c] hover:text-white'
               )}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              <Icon className="w-6 h-6 flex-shrink-0" />
               <span className="flex-1 text-left">{label}</span>
               <kbd className={cn(
                 'text-[10px] px-1 py-0.5 rounded border font-mono leading-none',
