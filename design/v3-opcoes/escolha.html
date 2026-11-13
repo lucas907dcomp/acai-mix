@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caixa · v3 · mesmas cores, desenho novo</title>
+<style>
+  :root{--fundo:#0f0720;--card:#1a0b2e;--borda:#2d1550;--txt2:#9d7bc8;--roxo:#4c1e8c;--roxo2:#5d2aaa;--apagado:#4a3570;--verde:#10b981;--verde2:#059669;--amarelo:#fcd34d}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#07030f;color:#fff;font-family:Inter,"Segoe UI",system-ui,sans-serif;padding:24px}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:var(--txt2);margin-bottom:24px;font-size:14px}
+  .opcao{margin-bottom:40px}
+  .opcao h2{font-size:20px;margin-bottom:4px}
+  .opcao p{color:var(--txt2);font-size:14px;margin-bottom:12px;max-width:900px}
+  .tela{width:1366px;height:768px;background:var(--fundo);display:flex;overflow:hidden;border:1px solid var(--borda);border-radius:8px;font-size:14px}
+  img.tela{display:block}
+  /* lateral igual à de hoje */
+  .lat{width:256px;background:var(--card);border-right:1px solid var(--borda);display:flex;flex-direction:column}
+  .lat .loja{display:flex;gap:12px;align-items:center;padding:20px 24px;border-bottom:1px solid var(--borda);font-weight:700;font-size:18px}
+  .lat .av{width:32px;height:32px;border-radius:50%;background:var(--roxo);display:grid;place-items:center;font-size:14px}
+  .lat nav{padding:16px}
+  .lat nav div{padding:10px 12px;color:var(--txt2);border-radius:8px;margin-bottom:4px}
+  .lat nav .on{background:var(--roxo);color:#fff}
+  .lat .pe{margin-top:auto;padding:24px 28px;border-top:1px solid var(--borda);color:var(--txt2);font-size:13px;line-height:1.9}
+  .lat .pe b{color:#fff;font-size:14px}
+  .meio{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .turno{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:10px 16px;color:var(--txt2)}
+  .turno b{color:var(--verde);font-size:15px}
+  .corpo{flex:1;display:flex;gap:16px;min-height:0}
+  .esq{flex:1;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .dir{width:348px;background:var(--card);border:1px solid var(--borda);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+  .tag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
+  .manual{background:#3a2a05;color:var(--amarelo);border:1px solid #6b5212}
+  .bal{background:var(--borda);color:#c9b3ea;border-radius:6px}
+  .rot{color:var(--txt2);font-size:13px;font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  .vazio{color:var(--apagado)}
+  .btn{border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .kbd{font-size:11px;border:1px solid currentColor;border-radius:4px;padding:0 5px;opacity:.6;font-weight:600}
+  .lista .lin{display:grid;grid-template-columns:56px 1fr 1fr 64px 20px;align-items:center;padding:12px 14px;border-top:1px solid var(--borda)}
+  .lista .cab{color:var(--txt2);font-size:12px;border-top:0}
+  .pill{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;text-align:center}
+  .p-pix{background:#0d3b2e;color:#34d399}.p-cre{background:#2d1550;color:#c9b3ea}
+</style>
+</head>
+<body>
+<h1>Caixa · 3 desenhos novos, mesmas cores</h1>
+<div class="sub">Cores, fonte, menu e posição das coisas iguais a hoje. Muda só o desenho de cada peça. Nenhuma rola para baixo em 1366×768.</div>
+
+<div class="opcao">
+  <h2>Hoje</h2>
+  <p>Como está no ar. Buraco vazio no meio, valor pequeno para o tamanho da caixa, mesas ocupando duas linhas.</p>
+  <img class="tela" src="hoje.png">
+</div>
+
+<div id="opcoes"></div>
+
+<script>
+const lat = `<div class="lat"><div class="loja"><div class="av">D</div>Demonstração</div><nav>
+<div class="on">Caixa (PDV)</div><div>Delivery</div><div>Dashboard</div><div>Estoque / Financeiro</div><div>Histórico</div><div>Consumo Func.</div><div>Configurações</div></nav>
+<div class="pe"><b>Demonstração</b><br>Admin<br><span style="color:var(--verde)">●</span> Online<br>Sair</div></div>`;
+const turno = `<div class="turno"><span>Turno 1 · lucas — aberto às 16:16 · 9h 47min</span><span>3 vendas &nbsp; <b>R$ 36,66</b></span></div>`;
+const vendas = [["21:04","200g","12,00","Crédito"],["19:49","350g","21,00","PIX"],["17:26","61g","3,66","PIX"]];
+const avulsos = (estilo) => ["Água|3,00","Picolé|5,00","Refrigerante lata|6,00"].map(s=>{const[n,v]=s.split("|");return `<div style="${estilo}"><div style="font-weight:700">${n}</div><div style="color:var(--verde);font-size:12px;margin-top:4px">R$ ${v}</div></div>`}).join("");
+const pags = ["PIX","Crédito","Débito","Dinheiro"];
+const mesas = [1,2,3,4,5];
+
+const opcoes = [
+{ nome:"A · Número grande",
+  txt:"O valor vira o centro da tela (72px, ocupa o buraco vazio). Confirmar Valor sai: Enter confirma e o botão verde já mostra o total. Mesas viram uma linha só de fichas. Lista com pagamento em etiqueta colorida.",
+  esq:`<div style="display:flex;gap:8px"><span class="tag manual">● Modo Manual</span><span class="tag bal">Conectar Balança</span></div>
+  <div style="flex:1;background:var(--card);border:1px solid var(--borda);border-radius:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px">
+    <div class="rot">VALOR DA VENDA</div>
+    <div class="num" style="font-size:76px;font-weight:800;letter-spacing:-2px"><span style="font-size:32px;color:var(--apagado);font-weight:700;margin-right:10px">R$</span>0,00</div>
+    <div style="color:var(--apagado);font-size:12px">digite e aperte Enter</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">${pags.map((p,i)=>`<div class="btn" style="height:58px;background:${i==0?'var(--roxo)':'var(--card)'};border:2px solid ${i==0?'#9d7bc8':'var(--borda)'};color:${i==0?'#fff':'var(--txt2)'};gap:10px">${p} <span class="kbd">${i+1}</span></div>`).join("")}</div>
+  <div class="btn" style="height:64px;background:var(--verde2);font-size:20px;gap:14px;opacity:.55">Confirmar Venda · R$ 0,00 <span class="kbd">↵</span></div>
+  <div style="display:flex;gap:8px;align-items:center"><span class="rot" style="margin-right:4px">Mesas</span>${mesas.map(m=>`<div style="background:var(--card);border:1px solid var(--borda);border-radius:999px;padding:6px 14px;font-size:13px"><b>${m}</b> <span class="vazio">· R$ 0</span></div>`).join("")}<div style="border:1px dashed var(--apagado);border-radius:999px;padding:6px 12px;color:var(--txt2);font-size:13px">+ conjunto</div><div style="border:1px dashed var(--apagado);border-radius:999px;padding:6px 12px;color:var(--txt2);font-size:13px">+ mesa fora</div></div>`,
+  dir:`<div style="padding:14px"><div class="rot" style="margin-bottom:10px">PRODUTOS AVULSOS</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${avulsos("background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:12px")}</div></div>
+  <div class="lista" style="flex:1"><div style="padding:12px 14px;font-weight:700;border-top:1px solid var(--borda)">Vendas do turno</div><div class="lin cab"><span>Hora</span><span>Peso</span><span>Valor</span><span>Pag.</span><span></span></div>
+  ${vendas.map(v=>`<div class="lin"><span style="color:var(--txt2)">${v[0]}</span><span>${v[1]}</span><span class="num" style="color:var(--verde);font-weight:700">R$ ${v[2]}</span><span class="pill ${v[3]=='PIX'?'p-pix':'p-cre'}">${v[3]}</span><span style="color:var(--txt2)">⎙</span></div>`).join("")}</div>
+  <div style="display:flex;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--borda);color:var(--txt2)"><span>3 vendas</span><b class="num" style="color:var(--verde);font-size:16px">R$ 36,66</b></div>`},
+
+{ nome:"B · Passos numerados",
+  txt:"A coluna vira 3 cartões em ordem: ① valor ② pagamento ③ confirmar. O caixa novo entende de primeira o que fazer. Mesas ficam num cartão próprio embaixo, compactas. Lista igual à de hoje, só com linhas alternadas.",
+  esq:`<div style="display:flex;gap:8px"><span class="tag manual">● Modo Manual</span><span class="tag bal">Conectar Balança</span></div>
+  ${[["1","Valor da venda",`<div style="display:flex;gap:10px"><div style="flex:1;background:var(--fundo);border:1px solid #4c1e8c;border-radius:10px;height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 20px"><span style="color:var(--apagado);font-size:22px;font-weight:700">R$</span><span class="num" style="font-size:50px;font-weight:800">0,00</span></div><div class="btn" style="width:150px;background:var(--borda);color:var(--txt2)">Confirmar <span class="kbd" style="margin-left:6px">↵</span></div></div>`],
+    ["2","Forma de pagamento",`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">${pags.map(p=>`<div class="btn" style="height:56px;background:var(--fundo);border:1px solid var(--borda);color:var(--apagado)">${p}</div>`).join("")}</div>`],
+    ["3","Confirmar",`<div class="btn" style="height:58px;background:var(--verde2);font-size:19px;opacity:.55">Confirmar Venda</div>`]
+   ].map(([n,t,c])=>`<div style="background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:14px 16px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:50%;background:var(--roxo);display:grid;place-items:center;font-size:12px;font-weight:800">${n}</span><span class="rot">${t}</span></div>${c}</div>`).join("")}
+  <div style="flex:1"></div>
+  <div style="background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:12px 16px;display:flex;gap:8px;align-items:center"><span class="rot" style="width:60px">Mesas</span>${mesas.map(m=>`<div style="flex:1;background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:6px 10px"><b>Mesa ${m}</b><div class="vazio" style="font-size:12px">R$ 0,00</div></div>`).join("")}<div style="color:var(--txt2);font-size:12px;line-height:1.6;padding-left:6px">+ conjunto<br>+ mesa fora</div></div>`,
+  dir:`<div style="padding:14px"><div class="rot" style="margin-bottom:10px">PRODUTOS AVULSOS</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${avulsos("background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:12px")}</div></div>
+  <div class="lista" style="flex:1"><div style="padding:12px 14px;font-weight:700;border-top:1px solid var(--borda)">Vendas do turno</div><div class="lin cab"><span>Hora</span><span>Peso</span><span>Valor</span><span>Pag.</span><span></span></div>
+  ${vendas.map((v,i)=>`<div class="lin" style="background:${i%2?'transparent':'#140825'}"><span style="color:var(--txt2)">${v[0]}</span><span>${v[1]}</span><span class="num" style="color:var(--verde);font-weight:700">R$ ${v[2]}</span><span style="color:var(--txt2);font-size:12px">${v[3]}</span><span style="color:var(--txt2)">⎙</span></div>`).join("")}</div>
+  <div style="display:flex;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--borda);color:var(--txt2)"><span>3 vendas</span><b class="num" style="color:var(--verde);font-size:16px">R$ 36,66</b></div>`},
+
+{ nome:"C · Botões de toque",
+  txt:"Pensado para tela de toque. Pagamento vira 4 blocos altos com o nome grande. Valor e Confirmar Valor na mesma linha. Confirmar Venda alto e largo. Mesas viram uma faixa no topo, sempre à vista. Na lista, cada venda vira um cartão com valor em destaque.",
+  esq:`<div style="display:flex;gap:8px;align-items:center"><span class="tag manual">● Modo Manual</span><span class="tag bal">Conectar Balança</span><div style="flex:1"></div>${mesas.map(m=>`<div style="background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:5px 12px;font-size:13px"><b>M${m}</b> <span class="vazio">0</span></div>`).join("")}<div style="border:1px dashed var(--apagado);border-radius:8px;padding:5px 10px;color:var(--txt2);font-size:13px">+</div></div>
+  <div class="rot" style="margin-top:6px">Valor da venda (R$)</div>
+  <div style="flex:1;display:flex;gap:10px"><div style="flex:1;background:var(--fundo);border:2px solid #4c1e8c;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 24px"><span style="color:var(--apagado);font-size:26px;font-weight:700">R$</span><span class="num" style="font-size:84px;font-weight:800">0,00</span></div><div class="btn" style="width:190px;background:var(--borda);color:var(--txt2);font-size:16px">Confirmar Valor</div></div>
+  <div class="rot" style="margin-top:6px">Forma de pagamento</div>
+  <div style="height:130px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px">${pags.map((p,i)=>`<div style="background:var(--card);border:1px solid var(--borda);border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;padding:16px;color:var(--apagado)"><span class="kbd" style="align-self:flex-end">${i+1}</span><span style="font-size:24px;font-weight:800">${p}</span></div>`).join("")}</div>
+  <div class="btn" style="height:76px;background:var(--verde2);font-size:22px;gap:14px;opacity:.55">Confirmar Venda <span class="kbd">↵</span></div>`,
+  dir:`<div style="padding:14px"><div class="rot" style="margin-bottom:10px">PRODUTOS AVULSOS</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${avulsos("background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:12px")}</div></div>
+  <div style="padding:4px 14px 10px;font-weight:700;border-top:1px solid var(--borda);padding-top:12px">Vendas do turno</div>
+  <div style="flex:1;padding:0 14px;display:flex;flex-direction:column;gap:8px">${vendas.map(v=>`<div style="background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><div><div class="num" style="color:var(--verde);font-weight:800;font-size:18px">R$ ${v[2]}</div><div style="color:var(--txt2);font-size:12px">${v[0]} · ${v[1]} · ${v[3]}</div></div><span style="color:var(--txt2)">✎ &nbsp;⎙</span></div>`).join("")}</div>
+  <div style="display:flex;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--borda);color:var(--txt2)"><span>3 vendas</span><b class="num" style="color:var(--verde);font-size:16px">R$ 36,66</b></div>`}
+];
+
+document.getElementById("opcoes").innerHTML = opcoes.map(o=>`<div class="opcao"><h2>${o.nome}</h2><p>${o.txt}</p>
+<div class="tela">${lat}<div class="meio">${turno}<div class="corpo"><div class="esq">${o.esq}</div><div class="dir">${o.dir}</div></div></div></div></div>`).join("");
+</script>
+</body>
+</html>
