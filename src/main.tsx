@@ -9,6 +9,18 @@ import { AuthProvider } from '@/providers/AuthProvider'
 import { queryClient } from '@/lib/queryClient'
 import './index.css'
 
+// Página aberta de antes de uma publicação pede arquivos que não existem mais
+// ("Failed to fetch dynamically imported module"). Recarregar traz a versão
+// nova. No máximo uma vez por minuto, para não entrar em laço se for a rede; e
+// só com internet, senão trocaria uma aba quebrada pelo caixa inteiro fora.
+window.addEventListener('vite:preloadError', (e) => {
+  const ultima = Number(sessionStorage.getItem('recarregou-em') ?? 0)
+  if (!navigator.onLine || Date.now() - ultima < 60_000) return
+  sessionStorage.setItem('recarregou-em', String(Date.now()))
+  e.preventDefault()
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
