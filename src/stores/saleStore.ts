@@ -62,6 +62,9 @@ interface SaleState {
   reset: () => void
 }
 
+// Recapturar muda o total: troco calculado contra o total antigo é troco errado.
+const SEM_TROCO = { amountReceived: null, change: null, secondAmountReceived: null, secondChange: null }
+
 export const useSaleStore = create<SaleState>((set, get) => ({
   capturedWeightGrams: null,
   pricePerGram: null,
@@ -80,13 +83,13 @@ export const useSaleStore = create<SaleState>((set, get) => ({
   captureWeight: (grams, pricePerGram) => {
     const { hasCasquinha, casquinhaPrice } = get()
     const amount = calcSaleAmount(grams, pricePerGram, hasCasquinha, casquinhaPrice)
-    set({ capturedWeightGrams: grams, pricePerGram, amount })
+    set({ capturedWeightGrams: grams, pricePerGram, amount, ...SEM_TROCO })
     useScaleStore.getState().consumeWeight()
   },
 
   captureAmount: (amount, pricePerGram) => {
     const grams = pricePerGram > 0 ? Math.round(amount / pricePerGram) : 0
-    set({ capturedWeightGrams: grams, pricePerGram, amount })
+    set({ capturedWeightGrams: grams, pricePerGram, amount, ...SEM_TROCO })
   },
 
   // Preço vem da loja (locations.casquinha_price), carregado no PDV pelo
