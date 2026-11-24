@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
-type Chave = 'finance_enabled' | 'delivery_enabled'
+type Chave = 'finance_enabled' | 'delivery_enabled' | 'employee_consumption_hidden'
 
 /**
  * Loja tem a seção ligada? Consulta separada de useLocationData de propósito:
@@ -29,3 +29,4 @@ function useLocationFlag(chave: Chave): boolean | undefined {
 
 export const useFinanceEnabled = () => useLocationFlag('finance_enabled')
 export const useDeliveryEnabled = () => useLocationFlag('delivery_enabled')
+export const useConsumptionHidden = () => useLocationFlag('employee_consumption_hidden')

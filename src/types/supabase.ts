@@ -258,6 +258,7 @@ export type Database = {
           delivery_fee: number
           delivery_info: string | null
           delivery_whatsapp: string | null
+          employee_consumption_hidden: boolean
           finance_enabled: boolean
           id: string
           logo_url: string | null
@@ -280,6 +281,7 @@ export type Database = {
           delivery_fee?: number
           delivery_info?: string | null
           delivery_whatsapp?: string | null
+          employee_consumption_hidden?: boolean
           finance_enabled?: boolean
           id?: string
           logo_url?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           delivery_fee?: number
           delivery_info?: string | null
           delivery_whatsapp?: string | null
+          employee_consumption_hidden?: boolean
           finance_enabled?: boolean
           id?: string
           logo_url?: string | null

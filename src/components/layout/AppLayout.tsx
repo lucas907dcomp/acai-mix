@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useLocationData } from '@/hooks/useLocationData'
-import { useDeliveryEnabled, useFinanceEnabled } from '@/hooks/useFinanceEnabled'
+import { useConsumptionHidden, useDeliveryEnabled, useFinanceEnabled } from '@/hooks/useFinanceEnabled'
 import { OfflineIndicator } from '@/components/sync/OfflineIndicator'
 import { LocationSelector } from '@/components/layout/LocationSelector'
 import { cn } from '@/lib/utils'
@@ -50,6 +50,7 @@ export function AppLayout() {
   const { data: location } = useLocationData()
   const financeEnabled = useFinanceEnabled()
   const deliveryEnabled = useDeliveryEnabled()
+  const consumptionHidden = useConsumptionHidden()
 
   // A tela de login não sabe de que cliente é o aparelho (mesmo site para
   // todos). Guarda a marca da última loja logada para mostrar lá.
@@ -77,9 +78,13 @@ export function AppLayout() {
     financeEnabled && roleLinks !== STAFF_LINKS
       ? roleLinks.flatMap((l) => (l.to === '/dashboard' ? [l, FINANCE_LINK] : [l]))
       : roleLinks
-  const links = deliveryEnabled
+  const comDelivery = deliveryEnabled
     ? comFinanceiro.flatMap((l) => (l.to === '/pos' ? [l, DELIVERY_LINK] : [l]))
     : comFinanceiro
+  // Só em loja com locations.employee_consumption_hidden.
+  const links = consumptionHidden
+    ? comDelivery.filter((l) => l.to !== '/employee-consumption')
+    : comDelivery
 
   async function handleLogout() {
     await supabase.auth.signOut()
