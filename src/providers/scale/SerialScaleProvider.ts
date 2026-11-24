@@ -38,9 +38,6 @@ const WATCHDOG_TIMEOUT_MS = 10_000
 const WATCHDOG_INTERVAL_MS = 3_000
 const LABEL_WEIGHT = /PESO L:\s*(\d{1,2})\.(\d{3})kg/
 const LABEL_MAX_LENGTH = 400
-// Peso que ninguém capturou some da tela: o prato já pode ser de outro cliente
-// e esta balança não avisa quando ele sai. Na loja, 60 s pareceu travado.
-const LABEL_EXPIRES_MS = 15_000
 
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
@@ -63,7 +60,6 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private labelText = ''
-  private labelTimer: ReturnType<typeof setTimeout> | null = null
 
   private readonly mode: ScaleMode
 
@@ -203,20 +199,19 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   // O texto chega picado em vários blocos: junta e procura o peso líquido.
+  // Não há zerar por tempo: o copo pode ficar parado no prato e esta balança
+  // não reenvia (15 s zerava com o copo em cima). O peso sai ao capturar, no
+  // Esc, com peso novo ou se a porta cair.
   private readLabel(value: Uint8Array): void {
     this.labelText = (this.labelText + String.fromCharCode(...value)).slice(-LABEL_MAX_LENGTH)
     const achado = LABEL_WEIGHT.exec(this.labelText)
     if (!achado) return
     this.labelText = this.labelText.slice(achado.index + achado[0].length)
     this.emitWeight(Number(achado[1]) * 1000 + Number(achado[2]))
-    if (this.labelTimer !== null) clearTimeout(this.labelTimer)
-    this.labelTimer = setTimeout(() => this.emitWeight(0), LABEL_EXPIRES_MS)
   }
 
   private clearLabel(): void {
     this.labelText = ''
-    if (this.labelTimer !== null) clearTimeout(this.labelTimer)
-    this.labelTimer = null
   }
 
   private emitWeight(grams: number): void {

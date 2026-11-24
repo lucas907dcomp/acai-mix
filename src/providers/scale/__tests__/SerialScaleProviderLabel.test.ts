@@ -77,13 +77,11 @@ describe('SerialScaleProvider — modo label (Urano POP-S)', () => {
     await provider.disconnect()
   })
 
-  it('silêncio não derruba a conexão; peso não capturado some em 15 s', async () => {
+  it('silêncio não derruba a conexão nem zera o peso parado no prato', async () => {
     const { provider, pesos, conexao } = await ler([bytes])
-    await vi.advanceTimersByTimeAsync(13_000)
-    expect(pesos).toEqual([138])
-    await vi.advanceTimersByTimeAsync(52_000)
+    await vi.advanceTimersByTimeAsync(300_000)
     expect(conexao).toEqual([true])
-    expect(pesos).toEqual([138, 0])
+    expect(pesos).toEqual([138])
     await provider.disconnect()
   })
 })
