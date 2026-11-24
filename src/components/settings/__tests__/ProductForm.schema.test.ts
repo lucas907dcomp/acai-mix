@@ -17,6 +17,7 @@ const productSchema = z.object({
     .number({ message: 'Preço obrigatório' })
     .min(0.01, 'Preço mínimo R$ 0,01')
     .max(999.99, 'Preço máximo R$ 999,99'),
+  category: z.string().trim().max(30, 'Máximo 30 caracteres'),
   sort_order: z
     .number({ message: 'Ordem inválida' })
     .int('Ordem deve ser um número inteiro')
@@ -24,7 +25,7 @@ const productSchema = z.object({
 })
 
 describe('ProductForm Zod schema', () => {
-  const validRow = { name: 'Picolé de coco', unit_price: 7.5, sort_order: 10 }
+  const validRow = { name: 'Picolé de coco', unit_price: 7.5, category: '', sort_order: 10 }
 
   it('accepts a valid row', () => {
     const r = productSchema.safeParse(validRow)

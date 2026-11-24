@@ -53,6 +53,8 @@ export interface Product {
   product_type: ProductType
   unit_price: number | null
   sort_order: number
+  /** Aba do produto avulso no caixa. Vazio = sem categoria. */
+  category?: string | null
   created_by?: string | null
   updated_by?: string | null
 }

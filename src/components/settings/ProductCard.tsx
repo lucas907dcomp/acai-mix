@@ -73,6 +73,12 @@ export function ProductCard({ product, onEdit }: ProductCardProps) {
           {priceLabel}
           <span className="mx-1.5">·</span>
           Ordem: {product.sort_order}
+          {product.category && (
+            <>
+              <span className="mx-1.5">·</span>
+              {product.category}
+            </>
+          )}
         </div>
       </div>
 

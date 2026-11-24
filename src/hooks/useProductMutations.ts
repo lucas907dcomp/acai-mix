@@ -8,6 +8,7 @@ interface CreateProductInput {
   name: string
   unit_price: number
   sort_order: number
+  category?: string | null
   active?: boolean
 }
 
@@ -16,6 +17,7 @@ interface UpdateProductInput {
   name?: string
   unit_price?: number
   sort_order?: number
+  category?: string | null
   active?: boolean
 }
 
@@ -46,6 +48,7 @@ export function useCreateProduct() {
           name: input.name,
           unit_price: input.unit_price,
           sort_order: input.sort_order,
+          category: input.category ?? null,
           active: input.active ?? true,
           product_type: 'unit',
           location_id: locationId,
@@ -91,12 +94,14 @@ export function useUpdateProduct() {
         name?: string
         unit_price?: number
         sort_order?: number
+        category?: string | null
         active?: boolean
       } = {
         updated_by: user?.id ?? null,
         ...(patch.name !== undefined && { name: patch.name }),
         ...(patch.unit_price !== undefined && { unit_price: patch.unit_price }),
         ...(patch.sort_order !== undefined && { sort_order: patch.sort_order }),
+        ...(patch.category !== undefined && { category: patch.category }),
         ...(patch.active !== undefined && { active: patch.active }),
       }
 

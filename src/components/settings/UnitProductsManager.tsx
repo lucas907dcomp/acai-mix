@@ -34,6 +34,11 @@ export function UnitProductsManager() {
 
   const existingNames = useMemo(() => list.map((p) => p.name), [list])
 
+  const categories = useMemo(
+    () => [...new Set(list.map((p) => p.category).filter((c): c is string => !!c))],
+    [list]
+  )
+
   const isDialogOpen = dialogState.mode !== 'closed'
 
   function closeDialog() {
@@ -100,6 +105,7 @@ export function UnitProductsManager() {
               product={dialogState.mode === 'edit' ? dialogState.product : undefined}
               defaultSortOrder={nextSortOrder}
               existingNames={existingNames}
+              categories={categories}
               onSuccess={closeDialog}
               onCancel={closeDialog}
             />

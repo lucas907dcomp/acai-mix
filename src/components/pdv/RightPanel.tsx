@@ -4,8 +4,8 @@ import { UnitProductsGrid } from './UnitProductsGrid'
 export function RightPanel() {
   return (
     <div className="flex flex-col h-full rounded-xl bg-[#1a0b2e] border border-[#2d1550] overflow-hidden min-h-0">
-      {/* Topo: Produtos Avulsos — altura natural, limitada a 45% do painel */}
-      <div className="shrink-0 border-b border-[#2d1550] p-3 overflow-y-auto max-h-[45%]">
+      {/* Topo: Produtos Avulsos — altura natural, limitada a 45% do painel (60% com abas de categoria) */}
+      <div className="shrink-0 border-b border-[#2d1550] p-3 overflow-y-auto max-h-[45%] has-[[data-categorias]]:max-h-[60%]">
         <UnitProductsGrid />
       </div>
 

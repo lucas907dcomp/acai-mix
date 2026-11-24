@@ -34,6 +34,7 @@ export interface CachedProduct {
   unit_price: number
   product_type: ProductType
   sort_order: number
+  category?: string | null
   active: boolean
   cached_at: number
 }

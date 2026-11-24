@@ -20,7 +20,7 @@ export function useUnitProducts() {
       const { data, error } = await supabase
         .from('products')
         .select(
-          'id, location_id, name, price_per_gram, active, updated_at, product_type, unit_price, sort_order, created_by, updated_by'
+          'id, location_id, name, price_per_gram, active, updated_at, product_type, unit_price, sort_order, category, created_by, updated_by'
         )
         .eq('location_id', locationId!)
         .eq('product_type', 'unit')

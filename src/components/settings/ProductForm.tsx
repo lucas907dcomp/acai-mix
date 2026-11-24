@@ -18,6 +18,7 @@ const productSchema = z.object({
     .number({ message: 'Preço obrigatório' })
     .min(0.01, 'Preço mínimo R$ 0,01')
     .max(999.99, 'Preço máximo R$ 999,99'),
+  category: z.string().trim().max(30, 'Máximo 30 caracteres'),
   sort_order: z
     .number({ message: 'Ordem inválida' })
     .int('Ordem deve ser um número inteiro')
@@ -38,6 +39,8 @@ interface ProductFormProps {
   defaultSortOrder?: number
   /** Existing names in the same location for client-side uniqueness check. */
   existingNames: string[]
+  /** Categorias já usadas na loja, sugeridas no campo. */
+  categories: string[]
   /** Called after a successful create/update so the parent can close the dialog. */
   onSuccess: () => void
   /** Called when user clicks Cancel. */
@@ -50,6 +53,7 @@ export function ProductForm({
   product,
   defaultSortOrder = 0,
   existingNames,
+  categories,
   onSuccess,
   onCancel,
 }: ProductFormProps) {
@@ -69,6 +73,7 @@ export function ProductForm({
     defaultValues: {
       name: product?.name ?? '',
       unit_price: product?.unit_price ?? undefined,
+      category: product?.category ?? '',
       sort_order: product?.sort_order ?? defaultSortOrder,
     },
   })
@@ -77,6 +82,7 @@ export function ProductForm({
     reset({
       name: product?.name ?? '',
       unit_price: product?.unit_price ?? undefined,
+      category: product?.category ?? '',
       sort_order: product?.sort_order ?? defaultSortOrder,
     })
   }, [product, defaultSortOrder, reset])
@@ -103,6 +109,7 @@ export function ProductForm({
           name: values.name.trim(),
           unit_price: values.unit_price,
           sort_order: values.sort_order,
+          category: values.category || null,
         })
         toast.success('Produto atualizado com sucesso!')
       } else {
@@ -110,6 +117,7 @@ export function ProductForm({
           name: values.name.trim(),
           unit_price: values.unit_price,
           sort_order: values.sort_order,
+          category: values.category || null,
           active: true,
         })
         toast.success('Produto criado com sucesso!')
@@ -163,6 +171,28 @@ export function ProductForm({
         {errors.unit_price && (
           <p className="text-red-400 text-xs">{errors.unit_price.message}</p>
         )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-sm text-[#9d7bc8]" htmlFor="product-category">
+          Categoria <span className="text-xs">(opcional)</span>
+        </label>
+        <input
+          id="product-category"
+          type="text"
+          maxLength={30}
+          list="product-categories"
+          autoComplete="off"
+          {...register('category')}
+          className={inputClass}
+          placeholder="Ex: Bebidas"
+        />
+        <datalist id="product-categories">
+          {categories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+        {errors.category && <p className="text-red-400 text-xs">{errors.category.message}</p>}
       </div>
 
       <div className="space-y-1.5">

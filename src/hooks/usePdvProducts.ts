@@ -30,7 +30,7 @@ export function usePdvProducts() {
         const { data, error } = await supabase
           .from('products')
           .select(
-            'id, location_id, name, price_per_gram, unit_price, product_type, sort_order, active, updated_at, created_by, updated_by'
+            'id, location_id, name, price_per_gram, unit_price, product_type, sort_order, category, active, updated_at, created_by, updated_by'
           )
           .eq('location_id', locationId)
           .eq('product_type', 'unit')
@@ -53,6 +53,7 @@ export function usePdvProducts() {
               unit_price: p.unit_price ?? 0,
               product_type: p.product_type ?? 'unit',
               sort_order: p.sort_order ?? 0,
+              category: p.category ?? null,
               active: p.active,
               cached_at: Date.now(),
             }))
@@ -78,6 +79,7 @@ export function usePdvProducts() {
         unit_price: p.unit_price,
         product_type: p.product_type,
         sort_order: p.sort_order,
+        category: p.category ?? null,
         active: p.active,
         updated_at: new Date(p.cached_at).toISOString(),
       })) as Product[]
