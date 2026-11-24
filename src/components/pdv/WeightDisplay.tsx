@@ -36,8 +36,10 @@ export function WeightDisplay() {
       >
         {weight !== null ? formatWeight(weight) : '— g'}
       </span>
-      {provider?.singleShot && !!weight && (
-        <span className="text-xs text-[#9d7bc8]">último peso da balança · Esc zera</span>
+      {provider?.singleShot && (
+        <span className="text-xs text-[#9d7bc8]">
+          {weight ? 'último peso da balança · Esc zera' : 'aperte P na balança para enviar o peso'}
+        </span>
       )}
     </div>
   )
