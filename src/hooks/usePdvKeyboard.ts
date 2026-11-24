@@ -58,6 +58,7 @@ export function usePdvKeyboard() {
 
       // Esc — clear current sale (only if there's something to clear)
       if (e.key === 'Escape') {
+        scale.consumeWeight() // balança de envio único: zera o peso parado na tela
         if (sale.capturedWeightGrams !== null || sale.paymentMethod !== null || sale.amount !== null) {
           e.preventDefault()
           sale.reset()

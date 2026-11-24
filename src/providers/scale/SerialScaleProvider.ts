@@ -39,8 +39,8 @@ const WATCHDOG_INTERVAL_MS = 3_000
 const LABEL_WEIGHT = /PESO L:\s*(\d{1,2})\.(\d{3})kg/
 const LABEL_MAX_LENGTH = 400
 // Peso que ninguém capturou some da tela: o prato já pode ser de outro cliente
-// e esta balança não avisa quando ele sai.
-const LABEL_EXPIRES_MS = 60_000
+// e esta balança não avisa quando ele sai. Na loja, 60 s pareceu travado.
+const LABEL_EXPIRES_MS = 15_000
 
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
