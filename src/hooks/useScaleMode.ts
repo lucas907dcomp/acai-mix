@@ -8,6 +8,7 @@ import type { ScaleMode } from '@/providers/scale/SerialScaleProvider'
  *
  *   'continuous' — Urano UPX (loja 1): transmite o peso sozinha.
  *   'polling'    — Toledo Prix (loja 2): só responde quando recebe ENQ.
+ *   'label'      — Urano POP-S (Iris): texto de etiqueta, uma vez por pesagem.
  *
  * Sai de `locations.scale_mode`.
  *
@@ -37,7 +38,7 @@ export function useScaleMode(): ScaleMode {
 
       // Comparação explícita: qualquer valor inesperado vira 'continuous'.
       const modo = (data as { scale_mode?: string } | null)?.scale_mode
-      return modo === 'polling' ? 'polling' : 'continuous'
+      return modo === 'polling' || modo === 'label' ? modo : 'continuous'
     },
     enabled: !!locationId,
     staleTime: 10 * 60_000,

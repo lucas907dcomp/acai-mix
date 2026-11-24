@@ -81,6 +81,7 @@ export const useSaleStore = create<SaleState>((set, get) => ({
     const { hasCasquinha, casquinhaPrice } = get()
     const amount = calcSaleAmount(grams, pricePerGram, hasCasquinha, casquinhaPrice)
     set({ capturedWeightGrams: grams, pricePerGram, amount })
+    useScaleStore.getState().consumeWeight()
   },
 
   captureAmount: (amount, pricePerGram) => {

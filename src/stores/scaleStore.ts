@@ -19,6 +19,8 @@ interface ScaleState {
   manualOverride: boolean
   setProvider: (provider: IScaleProvider) => void
   updateWeight: (grams: number) => void
+  /** Balança de envio único: o peso capturado não pode servir de novo. */
+  consumeWeight: () => void
   updateConnection: (connected: boolean) => void
   openManualDialog: () => void
   closeManualDialog: () => void
@@ -39,6 +41,10 @@ export const useScaleStore = create<ScaleState>((set, get) => ({
     set({ provider, providerType: provider.type, isConnected: false, currentWeightGrams: null }),
 
   updateWeight: (grams) => set({ currentWeightGrams: grams }),
+
+  consumeWeight: () => {
+    if (get().provider?.singleShot) set({ currentWeightGrams: 0 })
+  },
 
   updateConnection: (connected) => set({ isConnected: connected }),
 

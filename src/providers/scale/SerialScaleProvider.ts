@@ -19,7 +19,13 @@ import type { IScaleProvider, Unsubscribe } from './IScaleProvider'
 // segundo. O intervalo precisa ficar acima da PIOR latência medida (115ms),
 // senão um ENQ sai antes de a resposta anterior chegar e os pacotes se
 // embaralham no buffer — 200ms deixa 85ms de margem.
-export type ScaleMode = 'continuous' | 'polling'
+//
+//   'label'      — Urano US 20/2 POP-S (Iris, 24/11/2026): só conversa no
+//                  formato da impressora de etiqueta (USECB2). Manda 150 bytes
+//                  de texto por pesagem, sozinha no modo empacotadora (F5) ou
+//                  no P. Do texto sai o peso líquido: "PESO L:  0.138kg".
+//                  Calada entre pesagens, então não tem watchdog nem ENQ.
+export type ScaleMode = 'continuous' | 'polling' | 'label'
 
 const BAUD_RATE = 9600
 // Teto do buffer entre STX e ETX: lixo sem ETX não cresce para sempre.
@@ -30,6 +36,11 @@ const ENQ = 0x05
 const POLL_INTERVAL_MS = 200
 const WATCHDOG_TIMEOUT_MS = 10_000
 const WATCHDOG_INTERVAL_MS = 3_000
+const LABEL_WEIGHT = /PESO L:\s*(\d{1,2})\.(\d{3})kg/
+const LABEL_MAX_LENGTH = 400
+// Peso que ninguém capturou some da tela: o prato já pode ser de outro cliente
+// e esta balança não avisa quando ele sai.
+const LABEL_EXPIRES_MS = 60_000
 
 export class SerialScaleProvider implements IScaleProvider {
   readonly type = 'serial' as const
@@ -51,7 +62,14 @@ export class SerialScaleProvider implements IScaleProvider {
     void this.handleSerialDeviceReconnect(event)
   }
 
+  private labelText = ''
+  private labelTimer: ReturnType<typeof setTimeout> | null = null
+
   private readonly mode: ScaleMode
+
+  get singleShot(): boolean {
+    return this.mode === 'label'
+  }
 
   // Default 'continuous' de propósito: é o comportamento que já roda em
   // produção. Quem não passa nada continua com a balança de antes.
@@ -104,6 +122,7 @@ export class SerialScaleProvider implements IScaleProvider {
     this.isReconnecting = false
     this.readLoopActive = false
     this.stopWatchdog()
+    this.clearLabel()
     await this.stopPolling()
     if ('serial' in navigator) {
       navigator.serial.removeEventListener('connect', this.onSerialConnect)
@@ -146,6 +165,10 @@ export class SerialScaleProvider implements IScaleProvider {
         if (done) break
 
         this.lastDataTimestamp = Date.now()
+        if (this.mode === 'label') {
+          this.readLabel(value)
+          continue
+        }
         for (const byte of value) {
           if (byte === STX) buffer.length = 0
           buffer.push(byte)
@@ -179,8 +202,33 @@ export class SerialScaleProvider implements IScaleProvider {
     return /^\d+$/.test(weightStr) ? parseInt(weightStr, 10) : null
   }
 
+  // O texto chega picado em vários blocos: junta e procura o peso líquido.
+  private readLabel(value: Uint8Array): void {
+    this.labelText = (this.labelText + String.fromCharCode(...value)).slice(-LABEL_MAX_LENGTH)
+    const achado = LABEL_WEIGHT.exec(this.labelText)
+    if (!achado) return
+    this.labelText = this.labelText.slice(achado.index + achado[0].length)
+    this.emitWeight(Number(achado[1]) * 1000 + Number(achado[2]))
+    if (this.labelTimer !== null) clearTimeout(this.labelTimer)
+    this.labelTimer = setTimeout(() => this.emitWeight(0), LABEL_EXPIRES_MS)
+  }
+
+  private clearLabel(): void {
+    this.labelText = ''
+    if (this.labelTimer !== null) clearTimeout(this.labelTimer)
+    this.labelTimer = null
+  }
+
+  private emitWeight(grams: number): void {
+    this.weightCallbacks.forEach((cb) => cb(grams))
+  }
+
   private handleDisconnect(): void {
     if (this.isReconnecting) return
+    if (this.mode === 'label') {
+      this.clearLabel()
+      this.emitWeight(0)
+    }
     this.isReconnecting = true
     this.readLoopActive = false
     this.stopWatchdog()
@@ -301,6 +349,8 @@ export class SerialScaleProvider implements IScaleProvider {
   }
 
   private startWatchdog(): void {
+    // Em 'label' silêncio é normal: só fala quando alguém pesa.
+    if (this.mode === 'label') return
     this.stopWatchdog()
     this.lastDataTimestamp = Date.now()
     this.watchdogTimer = setInterval(() => {
