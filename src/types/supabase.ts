@@ -264,6 +264,7 @@ export type Database = {
           logo_url: string | null
           name: string
           scale_mode: string
+          shift_totals_hidden: boolean
           shift_change_hour: number
           single_operator: boolean
           table_count: number
@@ -287,6 +288,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           scale_mode?: string
+          shift_totals_hidden?: boolean
           shift_change_hour?: number
           single_operator?: boolean
           table_count?: number
@@ -310,6 +312,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           scale_mode?: string
+          shift_totals_hidden?: boolean
           shift_change_hour?: number
           single_operator?: boolean
           table_count?: number

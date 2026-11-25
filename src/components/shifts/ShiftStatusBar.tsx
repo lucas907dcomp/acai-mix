@@ -3,6 +3,7 @@ import { Clock, LogOut, Loader2 } from 'lucide-react'
 import { differenceInMinutes } from 'date-fns'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useShiftTotalsVisible } from '@/hooks/useFinanceEnabled'
 import { formatCurrency } from '@/stores/saleStore'
 import {
   Dialog,
@@ -26,6 +27,7 @@ export function ShiftStatusBar() {
   const activeShift = useShiftStore((s) => s.activeShift)
   const closeShift = useShiftStore((s) => s.closeShift)
   const profile = useAuthStore((s) => s.profile)
+  const totalsVisible = useShiftTotalsVisible()
   const [, setTick] = useState(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -74,12 +76,16 @@ export function ShiftStatusBar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-[#9d7bc8] text-xs">
-            {activeShift.sale_count} {activeShift.sale_count === 1 ? 'venda' : 'vendas'}
-          </span>
-          <span className="font-semibold text-[#10b981]">
-            {formatCurrency(activeShift.total_sales)}
-          </span>
+          {totalsVisible && (
+            <>
+              <span className="text-[#9d7bc8] text-xs">
+                {activeShift.sale_count} {activeShift.sale_count === 1 ? 'venda' : 'vendas'}
+              </span>
+              <span className="font-semibold text-[#10b981]">
+                {formatCurrency(activeShift.total_sales)}
+              </span>
+            </>
+          )}
           {/* Staff sempre encerra: a loja dele não tem login admin no balcão. */}
           {((profile?.role === 'admin' && activeShift.shift_number === 2) ||
             profile?.role === 'staff') && (

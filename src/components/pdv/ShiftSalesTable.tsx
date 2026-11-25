@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { contaDaVenda, imprimirConta } from '@/lib/imprimirConta'
 import { useTableCount } from '@/hooks/useTableCount'
 import { useLocationData } from '@/hooks/useLocationData'
+import { useShiftTotalsVisible } from '@/hooks/useFinanceEnabled'
 import { supabase } from '@/lib/supabase'
 import { useShiftStore } from '@/stores/shiftStore'
 import { useSyncStore } from '@/stores/syncStore'
@@ -93,6 +94,7 @@ export function ShiftSalesContent() {
   // Mesmo critério da conta da mesa: só loja com mesas imprime.
   const canPrint = !!useTableCount()
   const location = useLocationData().data
+  const totalsVisible = useShiftTotalsVisible()
 
   const { data: syncedSales = [], isLoading } = useQuery({
     queryKey: ['shift-sales', activeShift?.id],
@@ -207,7 +209,7 @@ export function ShiftSalesContent() {
         )}
       </div>
 
-      {combinedCount > 0 && (
+      {totalsVisible && combinedCount > 0 && (
         <div className="px-4 py-3 border-t border-[#2d1550] flex items-center justify-between shrink-0">
           <span className="text-xs text-[#9d7bc8]">{combinedCount} venda{combinedCount !== 1 ? 's' : ''}</span>
           <span className="text-sm font-semibold text-[#10b981]">{fmt.format(combinedTotal)}</span>
