@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useSaleStore, formatCurrency } from '@/stores/saleStore'
 import { useScaleStore } from '@/stores/scaleStore'
 import { usePricePerGram } from '@/hooks/usePricePerGram'
@@ -22,6 +24,25 @@ export function PriceDisplay() {
       ? Math.round((currentWeight * Math.round(pricePerGram * 100_000)) / 1_000) / 100
       : null
 
+  // Recapturar pedido e a balança mandou: troca sozinho. Vale só para a venda em
+  // que foi pedido, para o peso do próximo cliente nunca entrar nela.
+  const [aguardando, setAguardando] = useState(false)
+  useEffect(() => {
+    if (!aguardando || !pricePerGram) return
+    const pararVenda = useSaleStore.subscribe((v) => {
+      if (v.capturedWeightGrams === null) setAguardando(false)
+    })
+    const pararPeso = useScaleStore.subscribe((b) => {
+      if (!b.currentWeightGrams) return
+      setAguardando(false)
+      captureWeight(b.currentWeightGrams, pricePerGram)
+    })
+    return () => {
+      pararVenda()
+      pararPeso()
+    }
+  }, [aguardando, pricePerGram, captureWeight])
+
   function handleCapture() {
     if (currentWeight && currentWeight > 0 && pricePerGram) {
       captureWeight(currentWeight, pricePerGram)
@@ -29,11 +50,11 @@ export function PriceDisplay() {
   }
 
   function handleRecapture() {
-    // Balança de envio único: sem peso novo, descarta o antigo e espera ela
-    // mandar de novo (copo recolocado ou P). Nunca volta o peso velho.
+    // Balança de envio único: não dá para pedir o peso, e mudança pequena ela
+    // não reenvia sozinha. Sem peso novo, nada zera: fica esperando o P.
     if (singleShot && !(capturedWeight !== null && currentWeight)) {
-      useScaleStore.getState().consumeWeight()
-      useSaleStore.getState().reset()
+      if (capturedWeight !== null) setAguardando(true)
+      toast.info('Aperte P na balança para atualizar o peso.')
       return
     }
     useSaleStore.getState().captureWeight(currentWeight ?? capturedWeight ?? 0, pricePerGram ?? 0)
@@ -46,7 +67,9 @@ export function PriceDisplay() {
   }
 
   return (
-    <div className="rounded-xl bg-[#1a0b2e] border border-[#2d1550] p-4 space-y-3">
+    <div
+      className={`rounded-xl bg-[#1a0b2e] border border-[#2d1550] space-y-3 ${singleShot ? 'px-4 py-2.5' : 'p-4'}`}
+    >
       {/* Peso × preço/kg */}
       {displayWeight !== null && pricePerGram && (
         <p className="text-sm text-[#9d7bc8]">
@@ -107,7 +130,7 @@ export function PriceDisplay() {
         <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center justify-center py-2.5 rounded-lg bg-[#10b981]/10 border border-[#10b981]/30">
             <span className="text-xs text-[#10b981] font-semibold">
-              ✓ {capturedWeight}g capturado
+              {aguardando ? `${capturedWeight}g · aperte P na balança` : `✓ ${capturedWeight}g capturado`}
             </span>
           </div>
           <button
