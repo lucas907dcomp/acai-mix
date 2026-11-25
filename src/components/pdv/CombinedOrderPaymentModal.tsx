@@ -11,6 +11,7 @@ import { KEY_TO_PAYMENT } from '@/hooks/usePdvKeyboard'
 import { useTableCount } from '@/hooks/useTableCount'
 import { useLocationData } from '@/hooks/useLocationData'
 import { usePayByItem } from '@/hooks/useFinanceEnabled'
+import { PaidItems } from './PaidItems'
 import type { CombinedOrder, EscolhaItens } from '@/stores/combinedOrderStore'
 import type { PaymentMethod, PaymentSplitItem } from '@/types'
 
@@ -63,6 +64,8 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
   const escolha: EscolhaItens = {}
   for (const l of marcadas) escolha[l.id] = (escolha[l.id] ?? 0) + 1
   const itens = parcial ? separarItens(order.items, escolha).pagos : order.items
+
+  const jaPago = (order.paidItems ?? []).reduce((s, i) => s + i.amount, 0)
 
   const total = parcial ? Math.round(itens.reduce((s, i) => s + i.amount, 0) * 100) / 100 : order.total
   const isSplit = secondMethod !== null && secondAmount !== null
@@ -195,7 +198,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
         {payByItem ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-1 text-xs text-[#9d7bc8]">
-              <span>Marque o que vai ser pago agora</span>
+              <span>{jaPago > 0 ? `Já pago: ${formatCurrency(jaPago)}` : 'Marque o que vai ser pago agora'}</span>
               {linhas.length > 1 && (
                 <button
                   onClick={() => escolher(parcial ? new Set() : todasFora())}
@@ -206,7 +209,15 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
                 </button>
               )}
             </div>
-            <div className="bg-[#0f0720] rounded-xl p-1.5 space-y-1 max-h-40 [@media(max-height:800px)]:max-h-[8.75rem] overflow-y-auto">
+            {/* Dinheiro e divisão ocupam a tela: só aí a lista encolhe. */}
+            <div
+              className={cn(
+                'bg-[#0f0720] rounded-xl p-1.5 space-y-1 overflow-y-auto',
+                paymentMethod === 'cash' || secondMethod !== null
+                  ? 'max-h-40 [@media(max-height:800px)]:max-h-[8.75rem]'
+                  : 'max-h-60'
+              )}
+            >
               {linhas.map((l) => {
                 const marcada = !fora.has(l.key)
                 return (
@@ -235,6 +246,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
                   </button>
                 )
               })}
+              <PaidItems items={order.paidItems} />
             </div>
           </div>
         ) : (
@@ -253,7 +265,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
         {/* Total */}
         <div className="flex items-baseline justify-between px-1">
           <span className="text-sm text-[#9d7bc8]">
-            {parcial ? `Agora · fica ${formatCurrency(Math.round((order.total - total) * 100) / 100)} na conta` : 'Total'}
+            {marcadas.length === 0 ? `Marque os itens · falta ${formatCurrency(order.total)}` : parcial ? `Agora · fica ${formatCurrency(Math.round((order.total - total) * 100) / 100)} na conta` : jaPago > 0 ? 'Falta pagar' : 'Total'}
           </span>
           <span className="text-3xl font-bold text-amber-400">{formatCurrency(total)}</span>
         </div>

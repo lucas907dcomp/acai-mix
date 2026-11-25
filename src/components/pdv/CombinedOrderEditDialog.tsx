@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { formatCurrency } from '@/stores/saleStore'
+import { PaidItems } from './PaidItems'
 import type { CombinedOrder, CombinedOrderItem } from '@/stores/combinedOrderStore'
 
 interface Props {
@@ -55,12 +56,14 @@ export function CombinedOrderEditDialog({ open, order, onClose }: Props) {
                 </button>
               </div>
             ))}
+            <PaidItems items={order.paidItems} />
           </div>
         )}
 
         <div className="flex items-center justify-between py-2 border-t border-[#2d1550]">
           <span className="text-sm text-[#9d7bc8]">
             {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
+            {order.paidItems?.length ? ' a pagar' : ''}
           </span>
           <span className="text-base font-bold text-[#10b981]">
             {formatCurrency(order.total)}

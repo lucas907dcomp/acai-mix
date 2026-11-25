@@ -70,6 +70,7 @@ export function CombinedOrderCard({ order, isActive, onConfirmRequest }: Props) 
       {/* Name */}
       <p className={cn('text-xs font-semibold truncate pr-1', isActive ? 'text-amber-400' : 'text-white')}>
         {order.name}
+        {order.paidItems?.length ? <span className="text-[#10b981]"> · {order.paidItems.length} ✓</span> : null}
       </p>
 
       {/* Total */}

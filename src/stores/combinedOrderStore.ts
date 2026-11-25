@@ -32,6 +32,9 @@ export interface CombinedOrderUnitItem {
 
 export type CombinedOrderItem = CombinedOrderWeightItem | CombinedOrderUnitItem
 
+/** Item já pago, mostrado na conta só para conferência: não entra em items nem no total. */
+export type PaidItem = CombinedOrderItem & { methods: PaymentMethod[] }
+
 export interface CombinedOrder {
   id: string
   name: string
@@ -40,6 +43,8 @@ export interface CombinedOrder {
   createdAt: string
   /** Mesa fixa da loja: ao pagar ou cancelar esvazia, nunca some. */
   isTable?: boolean
+  /** Pagos por partes. Só existe enquanto ainda há item pendente. */
+  paidItems?: PaidItem[]
 }
 
 /** Id do item → quantas unidades entram neste pagamento (item por peso: 1). */
@@ -115,7 +120,7 @@ const MESMO_DIA = (iso: string): boolean => {
 const encerrar = (orders: CombinedOrder[], id: string): CombinedOrder[] =>
   orders.flatMap((o) => {
     if (o.id !== id) return [o]
-    return o.isTable ? [{ ...o, items: [], total: 0, createdAt: new Date().toISOString() }] : []
+    return o.isTable ? [{ ...o, items: [], paidItems: undefined, total: 0, createdAt: new Date().toISOString() }] : []
   })
 
 export const useCombinedOrderStore = create<CombinedOrderState>()(
@@ -201,9 +206,12 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
         if (o.id !== orderId) return o
         const item = o.items.find((i) => i.id === itemId)
         const amount = item?.amount ?? 0
+        const items = o.items.filter((i) => i.id !== itemId)
         return {
           ...o,
-          items: o.items.filter((i) => i.id !== itemId),
+          items,
+          // Sem pendente a conta acabou: o próximo cliente não pode herdar os pagos.
+          paidItems: items.length > 0 ? o.paidItems : undefined,
           total: Math.max(0, Math.round((o.total - amount) * 100) / 100),
         }
       }),
@@ -299,9 +307,13 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
         const atual = s.orders.find((o) => o.id === orderId)
         const restantes = atual && escolha ? separarItens(atual.items, escolha).restantes : []
         if (restantes.length > 0) {
+          const methods = paymentSplit ? paymentSplit.map((p) => p.method) : [paymentMethod]
+          const pagos: PaidItem[] = itens.map((i) => ({ ...i, methods }))
           return {
             orders: s.orders.map((o) =>
-              o.id === orderId ? { ...o, items: restantes, total: somar(restantes) } : o
+              o.id === orderId
+                ? { ...o, items: restantes, total: somar(restantes), paidItems: [...(o.paidItems ?? []), ...pagos] }
+                : o
             ),
           }
         }

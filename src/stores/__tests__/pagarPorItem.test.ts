@@ -70,6 +70,45 @@ describe('pagar por item', () => {
     expect(mesa().total).toBe(7)
   })
 
+  it('o pago fica na conta com a forma, fora do total, e some quando a mesa fecha', async () => {
+    acai(300, 14.97)
+    acai(450, 22.46)
+    const a = mesa().items[0].id
+    await store().confirmOrder(mesa().id, 'pix', null, null, { [a]: 1 })
+    expect(mesa().paidItems).toMatchObject([{ id: a, amount: 14.97, methods: ['pix'] }])
+    expect(mesa().total).toBe(22.46)
+
+    // Pagar o resto (sem escolha) cobra só o pendente e limpa a mesa.
+    await store().confirmOrder(mesa().id, 'credit')
+    expect(vendas.map((v) => v.amount)).toEqual([14.97, 22.46])
+    expect(mesa().items).toEqual([])
+    expect(mesa().paidItems).toBeUndefined()
+  })
+
+  it('pagamento dividido guarda as duas formas', async () => {
+    acai(300, 14.97)
+    acai(450, 22.46)
+    const split = [{ method: 'pix' as const, amount: 10 }, { method: 'cash' as const, amount: 4.97 }]
+    await store().confirmOrder(mesa().id, 'pix', 5, split, { [mesa().items[0].id]: 1 })
+    expect(mesa().paidItems?.[0].methods).toEqual(['pix', 'cash'])
+  })
+
+  it('o próximo cliente não herda os pagos: limpar a mesa ou remover o último pendente', async () => {
+    for (const limpar of [
+      () => store().cancelOrder(mesa().id),
+      () => store().removeItem(mesa().id, mesa().items[0].id),
+    ]) {
+      acai(300, 14.97)
+      acai(450, 22.46)
+      await store().confirmOrder(mesa().id, 'pix', null, null, { [mesa().items[0].id]: 1 })
+      expect(mesa().paidItems).toHaveLength(1)
+      limpar()
+      expect(mesa()).toMatchObject({ items: [], total: 0 })
+      expect(mesa().paidItems).toBeUndefined()
+      store().activateOrder(mesa().id)
+    }
+  })
+
   it('erro ao gravar não tira nada da mesa', async () => {
     acai(300, 14.97)
     acai(450, 22.46)
