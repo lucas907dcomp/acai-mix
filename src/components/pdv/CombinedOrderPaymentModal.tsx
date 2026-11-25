@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react'
-import { QrCode, CreditCard, Landmark, Banknote, Printer, ShoppingBag, SplitSquareHorizontal, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, QrCode, CreditCard, Landmark, Banknote, Printer, ShoppingBag, SplitSquareHorizontal, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/stores/saleStore'
-import { useCombinedOrderStore } from '@/stores/combinedOrderStore'
+import { separarItens, useCombinedOrderStore } from '@/stores/combinedOrderStore'
 import { getQuickValues } from '@/lib/quickValues'
 import { toast } from 'sonner'
 import { descreverItem, imprimirConta } from '@/lib/imprimirConta'
 import { KEY_TO_PAYMENT } from '@/hooks/usePdvKeyboard'
 import { useTableCount } from '@/hooks/useTableCount'
 import { useLocationData } from '@/hooks/useLocationData'
-import type { CombinedOrder } from '@/stores/combinedOrderStore'
+import { usePayByItem } from '@/hooks/useFinanceEnabled'
+import type { CombinedOrder, EscolhaItens } from '@/stores/combinedOrderStore'
 import type { PaymentMethod, PaymentSplitItem } from '@/types'
 
 interface Props {
@@ -26,6 +27,19 @@ const METHODS_INFO: { method: PaymentMethod; label: string; Icon: React.ElementT
   { method: 'cash',   label: 'Dinheiro', Icon: Banknote },
 ]
 
+/** Uma linha por unidade: "3x Água" vira três, cada uma paga por quem quiser. */
+const linhasDe = (order: CombinedOrder) =>
+  order.items.flatMap((item) =>
+    item.type === 'unit' && item.quantity > 1
+      ? Array.from({ length: item.quantity }, (_, n) => ({
+          key: `${item.id}:${n}`,
+          id: item.id,
+          texto: item.product_name,
+          valor: item.unit_price,
+        }))
+      : [{ key: `${item.id}:0`, id: item.id, texto: descreverItem(item), valor: item.amount }]
+  )
+
 export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const [amountReceived, setAmountReceived] = useState<number | null>(null)
@@ -39,7 +53,18 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
   const canPrint = !!useTableCount()
   const location = useLocationData().data
 
-  const total = order.total
+  // Pagar por partes: guarda o que foi DESMARCADO, então abre com tudo marcado.
+  const payByItem = usePayByItem()
+  const [fora, setFora] = useState<ReadonlySet<string>>(new Set())
+  const primeiraForma = useRef<HTMLButtonElement>(null)
+  const linhas = linhasDe(order)
+  const marcadas = payByItem ? linhas.filter((l) => !fora.has(l.key)) : linhas
+  const parcial = marcadas.length < linhas.length
+  const escolha: EscolhaItens = {}
+  for (const l of marcadas) escolha[l.id] = (escolha[l.id] ?? 0) + 1
+  const itens = parcial ? separarItens(order.items, escolha).pagos : order.items
+
+  const total = parcial ? Math.round(itens.reduce((s, i) => s + i.amount, 0) * 100) / 100 : order.total
   const isSplit = secondMethod !== null && secondAmount !== null
   const firstPortion = isSplit ? total - secondAmount! : total
   const cashPortion = isSplit
@@ -59,6 +84,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
   const splitIncomplete = isSplit && (secondAmount === null || secondAmount <= 0 || secondAmount >= total)
   const canConfirm =
     paymentMethod !== null &&
+    marcadas.length > 0 &&
     !splitIncomplete &&
     !isInsufficient &&
     !secondInsufficient &&
@@ -92,12 +118,34 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
     return () => document.removeEventListener('keydown', onKeyDown)
   })
 
-  function handleClose() {
+  // Mudou o que está sendo pago, mudou o total: troco e divisão antigos não valem.
+  function escolher(novo: ReadonlySet<string>) {
+    setFora(novo)
+    setAmountReceived(null)
+    setSecondMethod(null)
+    setSecondAmount(null)
+    setSecondAmountReceived(null)
+  }
+
+  function alternar(key: string) {
+    const novo = new Set(fora)
+    if (!novo.delete(key)) novo.add(key)
+    escolher(novo)
+  }
+
+  const todasFora = () => new Set(linhas.map((l) => l.key))
+
+  function limparPagamento() {
     setPaymentMethod(null)
     setAmountReceived(null)
     setSecondMethod(null)
     setSecondAmount(null)
     setSecondAmountReceived(null)
+  }
+
+  function handleClose() {
+    limparPagamento()
+    setFora(new Set())
     onClose()
   }
 
@@ -109,8 +157,13 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
         ? [{ method: paymentMethod, amount: firstPortion }, { method: secondMethod!, amount: secondAmount! }]
         : null
       const cashReceived = cashPortion !== null ? amountReceived : isSplit && secondMethod === 'cash' ? secondAmountReceived : null
-      await confirmOrder(order.id, paymentMethod, cashReceived, paymentSplit)
-      handleClose()
+      const ok = await confirmOrder(order.id, paymentMethod, cashReceived, paymentSplit, parcial ? escolha : undefined)
+      if (!parcial) return handleClose()
+      if (!ok) return
+      // Ainda tem gente para pagar: fica aberto, nada marcado, para o próximo escolher.
+      limparPagamento()
+      const resto = useCombinedOrderStore.getState().orders.find((o) => o.id === order.id)
+      setFora(new Set(resto ? linhasDe(resto).map((l) => l.key) : []))
     } finally {
       setIsConfirming(false)
     }
@@ -118,7 +171,19 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent className="bg-[#1a0b2e] border-[#2d1550] text-white max-w-sm w-full">
+      <DialogContent
+        className={cn(
+          'bg-[#1a0b2e] border-[#2d1550] text-white max-w-sm w-full',
+          payByItem && 'max-h-[96dvh] overflow-y-auto'
+        )}
+        onOpenAutoFocus={(e) => {
+          // Com os itens clicáveis no topo, o foco inicial cairia neles e um Enter
+          // a mais desmarcaria um item sem ninguém ver.
+          if (!payByItem) return
+          e.preventDefault()
+          primeiraForma.current?.focus()
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-amber-400" />
@@ -127,6 +192,52 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
         </DialogHeader>
 
         {/* Items summary */}
+        {payByItem ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-1 text-xs text-[#9d7bc8]">
+              <span>Marque o que vai ser pago agora</span>
+              {linhas.length > 1 && (
+                <button
+                  onClick={() => escolher(parcial ? new Set() : todasFora())}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                  className="text-amber-400 hover:text-amber-300 font-medium"
+                >
+                  {parcial ? 'Marcar todos' : 'Desmarcar todos'}
+                </button>
+              )}
+            </div>
+            <div className="bg-[#0f0720] rounded-xl p-1.5 space-y-1 max-h-40 [@media(max-height:800px)]:max-h-[8.75rem] overflow-y-auto">
+              {linhas.map((l) => {
+                const marcada = !fora.has(l.key)
+                return (
+                  <button
+                    key={l.key}
+                    role="checkbox"
+                    aria-checked={marcada}
+                    onClick={() => alternar(l.key)}
+                    // Enter confirma o pagamento; quem marca é o clique ou o espaço.
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-left transition-colors',
+                      marcada ? 'bg-amber-500/10 text-white' : 'text-[#9d7bc8] hover:bg-[#2d1550]'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-4 h-4 rounded border flex items-center justify-center shrink-0',
+                        marcada ? 'bg-amber-500 border-amber-500 text-[#1a0b2e]' : 'border-[#9d7bc8]'
+                      )}
+                    >
+                      {marcada && <Check className="w-3 h-3" strokeWidth={3} />}
+                    </span>
+                    <span className="flex-1 truncate">{l.texto}</span>
+                    <span className="font-medium">{formatCurrency(l.valor)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
         <div className="bg-[#0f0720] rounded-xl p-3 space-y-1.5 max-h-36 overflow-y-auto">
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between items-center text-sm">
@@ -137,10 +248,13 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
             </div>
           ))}
         </div>
+        )}
 
         {/* Total */}
         <div className="flex items-baseline justify-between px-1">
-          <span className="text-sm text-[#9d7bc8]">Total</span>
+          <span className="text-sm text-[#9d7bc8]">
+            {parcial ? `Agora · fica ${formatCurrency(Math.round((order.total - total) * 100) / 100)} na conta` : 'Total'}
+          </span>
           <span className="text-3xl font-bold text-amber-400">{formatCurrency(total)}</span>
         </div>
 
@@ -151,6 +265,7 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
             {METHODS_INFO.map(({ method, label, Icon }, i) => (
               <button
                 key={method}
+                ref={i === 0 ? primeiraForma : undefined}
                 onClick={() => selectMethod(method)}
                 aria-pressed={paymentMethod === method}
                 className={cn(
@@ -306,20 +421,20 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
               imprimirConta({
                 loja: location?.brand_name ?? location?.name ?? '',
                 mesa: order.name,
-                itens: order.items,
-                total,
+                itens: itens.length > 0 ? itens : order.items,
+                total: itens.length > 0 ? total : order.total,
                 quando: new Date(),
               }).catch(() => toast.error('A impressora não respondeu. Veja se ela está ligada e tente de novo.'))
             }
             className="flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-500/50 text-amber-400 text-sm font-medium hover:bg-amber-500/10 transition-colors"
           >
             <Printer className="w-4 h-4" />
-            Imprimir conta
+            {parcial && itens.length > 0 ? 'Imprimir só os marcados' : 'Imprimir conta'}
           </button>
         )}
 
         {/* Confirm / Cancel */}
-        <div className="flex gap-2 pt-1">
+        <div className={cn('flex gap-2 pt-1', payByItem && 'sticky -bottom-6 -mb-6 pb-6 bg-[#1a0b2e]')}>
           <button
             onClick={handleClose}
             className="flex-1 py-3 rounded-xl border border-[#2d1550] text-[#9d7bc8] text-sm hover:bg-[#2d1550] hover:text-white transition-colors"
@@ -331,7 +446,11 @@ export function CombinedOrderPaymentModal({ order, open, onClose }: Props) {
             disabled={!canConfirm}
             className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors"
           >
-            {isConfirming ? 'Confirmando...' : 'Confirmar Pedido'}
+            {isConfirming
+              ? 'Confirmando...'
+              : parcial && marcadas.length > 0
+                ? `Pagar ${marcadas.length} de ${linhas.length}`
+                : 'Confirmar Pedido'}
           </button>
         </div>
       </DialogContent>

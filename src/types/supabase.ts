@@ -263,6 +263,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          pay_by_item: boolean
           scale_mode: string
           shift_totals_hidden: boolean
           shift_change_hour: number
@@ -287,6 +288,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          pay_by_item?: boolean
           scale_mode?: string
           shift_totals_hidden?: boolean
           shift_change_hour?: number
@@ -311,6 +313,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          pay_by_item?: boolean
           scale_mode?: string
           shift_totals_hidden?: boolean
           shift_change_hour?: number

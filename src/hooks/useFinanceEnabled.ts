@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
-type Chave = 'finance_enabled' | 'delivery_enabled' | 'employee_consumption_hidden' | 'shift_totals_hidden'
+type Chave = 'finance_enabled' | 'delivery_enabled' | 'employee_consumption_hidden' | 'shift_totals_hidden' | 'pay_by_item'
 
 /**
  * Loja tem a seção ligada? Consulta separada de useLocationData de propósito:
@@ -30,5 +30,7 @@ function useLocationFlag(chave: Chave): boolean | undefined {
 export const useFinanceEnabled = () => useLocationFlag('finance_enabled')
 export const useDeliveryEnabled = () => useLocationFlag('delivery_enabled')
 export const useConsumptionHidden = () => useLocationFlag('employee_consumption_hidden')
+/** Pedido conjunto pago por partes: escolhe os itens de cada pagamento. */
+export const usePayByItem = () => useLocationFlag('pay_by_item') === true
 /** Mostra só com `false`: carregando (`undefined`) não pode piscar o total na tela. */
 export const useShiftTotalsVisible = () => useLocationFlag('shift_totals_hidden') === false

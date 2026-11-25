@@ -42,6 +42,31 @@ export interface CombinedOrder {
   isTable?: boolean
 }
 
+/** Id do item → quantas unidades entram neste pagamento (item por peso: 1). */
+export type EscolhaItens = Record<string, number>
+
+const centavos = (v: number) => Math.round(v * 100) / 100
+const somar = (items: CombinedOrderItem[]) => centavos(items.reduce((s, i) => s + i.amount, 0))
+
+/** Separa o que entra no pagamento do que continua na mesa. */
+export function separarItens(items: CombinedOrderItem[], escolha: EscolhaItens) {
+  const pagos: CombinedOrderItem[] = []
+  const restantes: CombinedOrderItem[] = []
+  for (const item of items) {
+    const existe = item.type === 'unit' ? item.quantity : 1
+    const n = Math.min(existe, Math.max(0, Math.floor(escolha[item.id] ?? 0)))
+    if (n === 0) restantes.push(item)
+    else if (n === existe) pagos.push(item)
+    else if (item.type === 'unit') {
+      // O resto sai por diferença: as duas partes somam sempre o valor do item.
+      const pago = centavos(item.unit_price * n)
+      pagos.push({ ...item, quantity: n, amount: pago })
+      restantes.push({ ...item, quantity: existe - n, amount: centavos(item.amount - pago) })
+    }
+  }
+  return { pagos, restantes }
+}
+
 interface CombinedOrderState {
   orders: CombinedOrder[]
   activeOrderId: string | null
@@ -57,8 +82,10 @@ interface CombinedOrderState {
     orderId: string,
     paymentMethod: PaymentMethod,
     amountReceived?: number | null,
-    paymentSplit?: PaymentSplitItem[] | null
-  ) => Promise<void>
+    paymentSplit?: PaymentSplitItem[] | null,
+    /** Pagamento por partes: quanto pagar de cada item. Sem isso, paga tudo. */
+    escolha?: EscolhaItens
+  ) => Promise<boolean>
 }
 
 /**
@@ -191,22 +218,23 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
     }))
   },
 
-  confirmOrder: async (orderId, paymentMethod, amountReceived, paymentSplit) => {
+  confirmOrder: async (orderId, paymentMethod, amountReceived, paymentSplit, escolha) => {
     const { orders, activeOrderId } = get()
     const order = orders.find((o) => o.id === orderId)
-    if (!order || order.items.length === 0) return
+    const itens = order && escolha ? separarItens(order.items, escolha).pagos : order?.items
+    if (!order || !itens?.length) return false
 
     const { activeShift } = useShiftStore.getState()
     if (!activeShift) {
       toast.error('Nenhum turno ativo.')
-      return
+      return false
     }
 
     const { profile } = useAuthStore.getState()
-    if (!profile) return
+    if (!profile) return false
 
-    const total = order.items.reduce((sum, i) => sum + i.amount, 0)
-    const totalWeightGrams = order.items
+    const total = itens.reduce((sum, i) => sum + i.amount, 0)
+    const totalWeightGrams = itens
       .filter((i): i is CombinedOrderWeightItem => i.type === 'weight')
       .reduce((sum, i) => sum + i.weight_grams, 0)
 
@@ -219,7 +247,7 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
         ? Math.round(amountReceived * 100 - cashPortion * 100) / 100
         : null
 
-    const combinedItems = order.items.map((i) => {
+    const combinedItems = itens.map((i) => {
       if (i.type === 'weight') {
         return {
           type: 'weight' as const,
@@ -267,10 +295,21 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
     const saleInsert = { ...saleInsertBase, payment_split: sale.payment_split as unknown as Json | null }
 
     const removeOrder = () =>
-      set((s) => ({
-        orders: encerrar(s.orders, orderId),
-        activeOrderId: activeOrderId === orderId ? null : s.activeOrderId,
-      }))
+      set((s) => {
+        const atual = s.orders.find((o) => o.id === orderId)
+        const restantes = atual && escolha ? separarItens(atual.items, escolha).restantes : []
+        if (restantes.length > 0) {
+          return {
+            orders: s.orders.map((o) =>
+              o.id === orderId ? { ...o, items: restantes, total: somar(restantes) } : o
+            ),
+          }
+        }
+        return {
+          orders: encerrar(s.orders, orderId),
+          activeOrderId: activeOrderId === orderId ? null : s.activeOrderId,
+        }
+      })
 
     try {
       const { error } = await supabase.from('sales').insert(saleInsert)
@@ -284,6 +323,7 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
       queryClient.invalidateQueries({ queryKey: ['shift-sales'] })
       toast.success(`Pedido "${order.name}" confirmado! ${formatCurrency(sale.amount)}`)
       removeOrder()
+      return true
     } catch (err) {
       const msg =
         err instanceof Error
@@ -304,9 +344,10 @@ export const useCombinedOrderStore = create<CombinedOrderState>()(
         }
         toast.error('Sem conexão. Pedido salvo offline.')
         removeOrder()
-      } else {
-        toast.error(`Erro ao confirmar pedido: ${msg}`)
+        return true
       }
+      toast.error(`Erro ao confirmar pedido: ${msg}`)
+      return false
     }
   },
     }),
